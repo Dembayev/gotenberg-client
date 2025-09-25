@@ -44,22 +44,25 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		log.Fatalf("unexpected status code: %d", resp.StatusCode)
 	}
 
-	pdfData, err := io.ReadAll(resp.Body)
+	outFile, err := os.Create("./invoice_new.pdf")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer outFile.Close()
+
+	n, err := io.Copy(outFile, resp.Body)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if err := os.WriteFile("./invoice_new.pdf", pdfData, 0644); err != nil {
-		log.Fatal(err)
-	}
-
 	slog.Info("HTML to PDF conversion completed",
-		"pdf_size", resp.ContentLength,
+		"pdf_size_bytes", n,
 		"content_type", resp.Header.Get("Content-Type"),
 		"trace", resp.Header.Get("Gotenberg-Trace"))
 }

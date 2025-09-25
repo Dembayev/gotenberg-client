@@ -47,6 +47,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer resp.Body.Close()
 
 	slog.Info("Async HTML to PDF conversion started",
 		"trace", resp.Header.Get("Gotenberg-Trace"))
