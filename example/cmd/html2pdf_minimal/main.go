@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"context"
+	"io"
 	"log"
 	"log/slog"
 	"net/http"
@@ -30,18 +32,27 @@ func main() {
 	logo := image.LogoPNG()
 	files := map[string][]byte{"logo.png": logo}
 
-	resp, err := client.ConvertHTMLToPDF(html.Bytes(),
+	resp, err := client.ConvertHTMLToPDF(context.Background(), html.Bytes(),
 		gotenberg.WithHTMLAdditionalFiles(files),
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if err := os.WriteFile("./invoice_minimal.pdf", resp.PDF, 0644); err != nil {
+	if resp.StatusCode != http.StatusOK {
+		log.Fatalf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	pdfData, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := os.WriteFile("./invoice_minimal.pdf", pdfData, 0644); err != nil {
 		log.Fatal(err)
 	}
 
 	slog.Info("Minimal HTML to PDF conversion completed",
-		"pdf_size", len(resp.PDF),
-		"trace", resp.Trace)
+		"pdf_size", len(pdfData),
+		"trace", resp.Header.Get("Gotenberg-Trace"))
 }
