@@ -32,13 +32,13 @@ func main() {
 	logo := image.LogoPNG()
 
 	resp, err := client.ConvertHTMLToPDF(context.Background(), html,
+		gotenberg.WithFile("logo.png", bytes.NewReader(logo)),
 		gotenberg.WithPrintBackground(true),
 		gotenberg.WithLandscape(false),
 		gotenberg.WithScale(1.0),
 		gotenberg.WithOutputFilename("invoice.pdf"),
 		gotenberg.WithPaperSizeA4(),
 		gotenberg.WithMargins(1.0, 1.0, 1.0, 1.0),
-		gotenberg.WithFile("logo.png", bytes.NewReader(logo)),
 	)
 	if err != nil {
 		log.Fatal(err)
