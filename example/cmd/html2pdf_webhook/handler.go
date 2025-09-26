@@ -16,7 +16,7 @@ func webhookHandler(name string) http.HandlerFunc {
 			return
 		}
 
-		outFile, err := os.Create("invoice_async.pdf")
+		outFile, err := os.Create("./invoice_async.pdf")
 		if err != nil {
 			log.Fatal(err)
 		}

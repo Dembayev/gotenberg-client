@@ -125,3 +125,75 @@ func BenchmarkConvertHTMLToPDF(b *testing.B) {
 		_, _ = client.ConvertHTMLToPDF(context.Background(), bytes.NewReader(html))
 	}
 }
+
+func BenchmarkOptionsBuilder(b *testing.B) {
+	mrt := &mockRoundTripper{}
+	client := NewClient(&http.Client{Transport: mrt}, "http://example.com")
+	html := []byte("<html><body>Benchmark</body></html>")
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		opts := NewOptionsBuilder().
+			PaperSizeA4().
+			Margins(1.0, 1.0, 1.0, 1.0).
+			Landscape(false).
+			PrintBackground(true).
+			Build()
+		_, _ = client.ConvertHTMLToPDF(context.Background(), bytes.NewReader(html), opts)
+	}
+}
+
+func TestOptionsBuilder_Success(t *testing.T) {
+	mrt := &mockRoundTripper{}
+	client := NewClient(&http.Client{Transport: mrt}, "http://example.com")
+
+	html := []byte("<html><body>Hello Builder</body></html>")
+	cssFile := bytes.NewReader([]byte("body { color: red; }"))
+
+	// Test builder with complex configuration
+	options := NewOptionsBuilder().
+		File("styles.css", cssFile).
+		PaperSizeA4().
+		Margins(1.5, 1.0, 1.5, 1.0).
+		PrintBackground(true).
+		Landscape(false).
+		Scale(0.8).
+		OutputFilename("test-builder.pdf").
+		WebhookSuccess("https://webhook.example.com/success", "POST").
+		WebhookError("https://webhook.example.com/error", "POST").
+		WebhookExtraHeader("Authorization", "Bearer token123").
+		WebhookExtraHeader("X-Custom", "test-value").
+		Build()
+
+	resp, err := client.ConvertHTMLToPDF(context.Background(), bytes.NewReader(html), options)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp == nil {
+		t.Fatalf("expected response, got nil")
+	}
+
+	// Verify request was made properly
+	if mrt.lastReq == nil {
+		t.Fatalf("request was not captured by transport")
+	}
+	if !strings.Contains(mrt.lastReq.URL.Path, "/forms/chromium/convert/html") {
+		t.Fatalf("unexpected request path: %s", mrt.lastReq.URL.Path)
+	}
+
+	// Check headers set by builder
+	if filename := mrt.lastReq.Header.Get("Gotenberg-Output-Filename"); filename != "test-builder.pdf" {
+		t.Fatalf("expected output filename test-builder.pdf, got %s", filename)
+	}
+	if webhookURL := mrt.lastReq.Header.Get("Gotenberg-Webhook-Url"); webhookURL != "https://webhook.example.com/success" {
+		t.Fatalf("expected webhook URL, got %s", webhookURL)
+	}
+
+	// Verify multipart body contains our CSS file
+	if !bytes.Contains(mrt.lastBody, []byte("filename=\"styles.css\"")) {
+		t.Fatalf("multipart body missing styles.css filename")
+	}
+	if !bytes.Contains(mrt.lastBody, []byte("color: red;")) {
+		t.Fatalf("body does not contain CSS content")
+	}
+}

@@ -9,6 +9,8 @@ type clientOptions struct {
 	Webhook        webhookOptions
 }
 
+type ClientOptions func(*clientOptions)
+
 type pageProperties struct {
 	SinglePage              *bool
 	PaperWidth              *float64

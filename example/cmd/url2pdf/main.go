@@ -21,11 +21,14 @@ func main() {
 
 	client := gotenberg.NewClient(httpClient, gotenbergURL)
 
-	resp, err := client.ConvertURLToPDF(context.Background(), "https://example.com",
-		gotenberg.WithPrintBackground(true),
-		gotenberg.WithOutputFilename("example.pdf"),
-		gotenberg.WithPaperSizeLetter(),
-	)
+	// Using builder pattern for URL to PDF conversion
+	options := gotenberg.NewOptionsBuilder().
+		PrintBackground(true).
+		OutputFilename("example.pdf").
+		PaperSizeLetter().
+		Build()
+
+	resp, err := client.ConvertURLToPDF(context.Background(), "https://example.com", options)
 	if err != nil {
 		log.Fatal(err)
 	}

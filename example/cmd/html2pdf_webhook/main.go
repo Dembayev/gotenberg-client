@@ -34,21 +34,18 @@ func main() {
 
 	logo := image.LogoPNG()
 
-	resp, err := client.ConvertHTMLToPDF(context.Background(), html,
-		gotenberg.WithFile("logo.png", bytes.NewReader(logo)),
-		gotenberg.WithPrintBackground(true),
-		gotenberg.WithOutputFilename("invoice_async.pdf"),
-		gotenberg.WithWebhookSuccess(
-			"http://host.docker.internal:28080/success",
-			"POST",
-		),
-		gotenberg.WithWebhookError(
-			"http://host.docker.internal:28080/error",
-			"POST",
-		),
-		gotenberg.WithWebhookExtraHeader("Authorization", "Bearer your-token"),
-		gotenberg.WithWebhookExtraHeader("X-Custom-Header", "custom-value"),
-	)
+	// Using builder pattern with webhook configuration
+	options := gotenberg.NewOptionsBuilder().
+		File("logo.png", bytes.NewReader(logo)).
+		PrintBackground(true).
+		OutputFilename("invoice_async.pdf").
+		WebhookSuccess("http://host.docker.internal:28080/success", "POST").
+		WebhookError("http://host.docker.internal:28080/error", "POST").
+		WebhookExtraHeader("Authorization", "Bearer your-token").
+		WebhookExtraHeader("X-Custom-Header", "custom-value").
+		Build()
+
+	resp, err := client.ConvertHTMLToPDF(context.Background(), html, options)
 	if err != nil {
 		log.Fatal(err)
 	}

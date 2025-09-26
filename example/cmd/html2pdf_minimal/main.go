@@ -31,9 +31,11 @@ func main() {
 
 	logo := image.LogoPNG()
 
-	resp, err := client.ConvertHTMLToPDF(context.Background(), html,
-		gotenberg.WithFile("logo.png", bytes.NewReader(logo)),
-	)
+	options := gotenberg.NewOptionsBuilder().
+		File("logo.png", bytes.NewReader(logo)).
+		Build()
+
+	resp, err := client.ConvertHTMLToPDF(context.Background(), html, options)
 	if err != nil {
 		log.Fatal(err)
 	}

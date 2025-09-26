@@ -31,15 +31,17 @@ func main() {
 
 	logo := image.LogoPNG()
 
-	resp, err := client.ConvertHTMLToPDF(context.Background(), html,
-		gotenberg.WithFile("logo.png", bytes.NewReader(logo)),
-		gotenberg.WithPrintBackground(true),
-		gotenberg.WithLandscape(false),
-		gotenberg.WithScale(1.0),
-		gotenberg.WithOutputFilename("invoice.pdf"),
-		gotenberg.WithPaperSizeA4(),
-		gotenberg.WithMargins(1.0, 1.0, 1.0, 1.0),
-	)
+	options := gotenberg.NewOptionsBuilder().
+		File("logo.png", bytes.NewReader(logo)).
+		PrintBackground(true).
+		Landscape(false).
+		Scale(1.0).
+		OutputFilename("invoice.pdf").
+		PaperSizeA4().
+		Margins(1.0, 1.0, 1.0, 1.0).
+		Build()
+
+	resp, err := client.ConvertHTMLToPDF(context.Background(), html, options)
 	if err != nil {
 		log.Fatal(err)
 	}

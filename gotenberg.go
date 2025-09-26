@@ -12,7 +12,9 @@ import (
 	"sync"
 )
 
-const defaultBufferSize = 1 << 10 // 1KB
+const (
+	defaultBufferSize = 1 << 12 // 4KB - better for typical file operations
+)
 
 type Client struct {
 	httpClient *http.Client
@@ -33,7 +35,7 @@ func NewClient(httpClient *http.Client, baseURL string) *Client {
 
 	c.bufPool = sync.Pool{
 		New: func() any {
-			buf := make([]byte, defaultBufferSize)
+			buf := make([]byte, 0, defaultBufferSize)
 			return &buf
 		},
 	}
@@ -42,7 +44,7 @@ func NewClient(httpClient *http.Client, baseURL string) *Client {
 }
 
 func (c *Client) ConvertURLToPDF(ctx context.Context, url string, opts ...ClientOptions) (*http.Response, error) {
-	if url == "" {
+	if len(url) == 0 {
 		return nil, fmt.Errorf("URL is required")
 	}
 
@@ -52,6 +54,7 @@ func (c *Client) ConvertURLToPDF(ctx context.Context, url string, opts ...Client
 	}
 
 	var buf bytes.Buffer
+	buf.Grow(2048)
 	writer := multipart.NewWriter(&buf)
 
 	if err := writer.WriteField("url", url); err != nil {
@@ -94,6 +97,7 @@ func (c *Client) ConvertHTMLToPDF(ctx context.Context, indexHTML io.Reader, opts
 	}
 
 	var buf bytes.Buffer
+	buf.Grow(4096)
 	writer := multipart.NewWriter(&buf)
 
 	if err := c.addFileField(writer, "files", "index.html", indexHTML); err != nil {
