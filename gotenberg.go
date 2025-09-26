@@ -96,10 +96,10 @@ func (c *Client) ConvertHTMLToPDF(ctx context.Context, indexHTML io.Reader, opts
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)
 
-	if config.Files == nil {
-		config.Files = make(map[string]io.Reader)
+	if err := c.addFileField(writer, "files", "index.html", indexHTML); err != nil {
+		return nil, fmt.Errorf("failed to add file %s: %w", "index.html", err)
 	}
-	config.Files["index.html"] = indexHTML
+
 	for filename, content := range config.Files {
 		if err := c.addFileField(writer, "files", filename, content); err != nil {
 			return nil, fmt.Errorf("failed to add file %s: %w", filename, err)
