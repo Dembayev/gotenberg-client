@@ -28,21 +28,21 @@ func main() {
 	invoice.Template.Execute(html, data)
 
 	logo := image.LogoPNG()
-	files := map[string][]byte{"logo.png": logo}
 
-	resp, err := client.ConvertHTMLToPDF(context.Background(), html.Bytes(),
+	resp, err := client.ConvertHTMLToPDF(context.Background(), html,
 		gotenberg.WithPrintBackground(true),
 		gotenberg.WithOutputFilename("invoice_async.pdf"),
-		gotenberg.WithWebhook(
+		gotenberg.WithWebhookSuccess(
 			"https://your-webhook-url.com/success",
-			"https://your-webhook-url.com/error",
+			"POST",
 		),
-		gotenberg.WithWebhookMethods("POST", "POST"),
-		gotenberg.WithWebhookExtraHeaders(map[string]string{
-			"Authorization":   "Bearer your-token",
-			"X-Custom-Header": "custom-value",
-		}),
-		gotenberg.WithHTMLAdditionalFiles(files),
+		gotenberg.WithWebhookError(
+			"https://your-webhook-url.com/error",
+			"POST",
+		),
+		gotenberg.WithWebhookExtraHeader("Authorization", "Bearer your-token"),
+		gotenberg.WithWebhookExtraHeader("X-Custom-Header", "custom-value"),
+		gotenberg.WithFile("logo.png", bytes.NewReader(logo)),
 	)
 	if err != nil {
 		log.Fatal(err)

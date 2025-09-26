@@ -2,13 +2,13 @@ package gotenberg
 
 import (
 	"encoding/json"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"strconv"
 	"strings"
 )
 
-// pageProperties internal type for page parameters
 type pageProperties struct {
 	SinglePage              *bool
 	PaperWidth              *float64
@@ -27,7 +27,6 @@ type pageProperties struct {
 	NativePageRanges        *string
 }
 
-// webhookOptions internal type for webhook parameters
 type webhookOptions struct {
 	URL          *string
 	ErrorURL     *string
@@ -36,18 +35,16 @@ type webhookOptions struct {
 	ExtraHeaders map[string]string
 }
 
-// addFileField adds file to multipart form
-func (c *Client) addFileField(writer *multipart.Writer, fieldName, filename string, content []byte) error {
+func (c *Client) addFileField(writer *multipart.Writer, fieldName, filename string, content io.Reader) error {
 	part, err := writer.CreateFormFile(fieldName, filename)
 	if err != nil {
 		return err
 	}
 
-	_, err = part.Write(content)
+	_, err = io.Copy(part, content)
 	return err
 }
 
-// addPageProperties adds page properties to form
 func (c *Client) addPageProperties(writer *multipart.Writer, props pageProperties) error {
 	if props.SinglePage != nil {
 		if err := writer.WriteField("singlePage", strconv.FormatBool(*props.SinglePage)); err != nil {
@@ -142,7 +139,6 @@ func (c *Client) addPageProperties(writer *multipart.Writer, props pagePropertie
 	return nil
 }
 
-// addWebhookHeaders adds headers for webhook
 func (c *Client) addWebhookHeaders(req *http.Request, opts webhookOptions) {
 	if opts.URL != nil {
 		req.Header.Set("Gotenberg-Webhook-Url", *opts.URL)

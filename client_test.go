@@ -50,14 +50,6 @@ func TestConvertHTMLToPDF_Errors(t *testing.T) {
 	}
 }
 
-func TestConvertMarkdownToPDF_Errors(t *testing.T) {
-	c := NewClient(&http.Client{}, "http://example.com")
-	_, err := c.ConvertMarkdownToPDF(context.Background(), nil, nil)
-	if err == nil {
-		t.Fatalf("expected error when indexHTML or markdown files are empty")
-	}
-}
-
 func TestConvertURLToPDF_Success(t *testing.T) {
 	mrt := &mockRoundTripper{}
 	client := NewClient(&http.Client{Transport: mrt}, "http://example.com")
@@ -92,7 +84,7 @@ func TestConvertHTMLToPDF_Success(t *testing.T) {
 	client := NewClient(&http.Client{Transport: mrt}, "http://example.com")
 
 	html := []byte("<html><body>Hello</body></html>")
-	resp, err := client.ConvertHTMLToPDF(context.Background(), html)
+	resp, err := client.ConvertHTMLToPDF(context.Background(), bytes.NewReader(html))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -114,35 +106,6 @@ func TestConvertHTMLToPDF_Success(t *testing.T) {
 	}
 }
 
-func TestConvertMarkdownToPDF_Success(t *testing.T) {
-	mrt := &mockRoundTripper{}
-	client := NewClient(&http.Client{Transport: mrt}, "http://example.com")
-
-	index := []byte("<html><body>Index</body></html>")
-	mds := map[string][]byte{"a.md": []byte("# Heading\n\nContent")}
-
-	resp, err := client.ConvertMarkdownToPDF(context.Background(), index, mds)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if resp == nil {
-		t.Fatalf("expected response, got nil")
-	}
-
-	if mrt.lastReq == nil {
-		t.Fatalf("request was not captured by transport")
-	}
-	if !strings.Contains(mrt.lastReq.URL.Path, "/forms/chromium/convert/markdown") {
-		t.Fatalf("unexpected request path: %s", mrt.lastReq.URL.Path)
-	}
-	if !bytes.Contains(mrt.lastBody, []byte("filename=\"a.md\"")) {
-		t.Fatalf("multipart body missing a.md filename")
-	}
-	if !bytes.Contains(mrt.lastBody, []byte("# Heading")) {
-		t.Fatalf("body does not contain markdown content")
-	}
-}
-
 // Benchmarks: minimal loops calling the three conversion methods.
 func BenchmarkConvertURLToPDF(b *testing.B) {
 	mrt := &mockRoundTripper{}
@@ -159,19 +122,6 @@ func BenchmarkConvertHTMLToPDF(b *testing.B) {
 	html := []byte("<html><body>Benchmark</body></html>")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = client.ConvertHTMLToPDF(context.Background(), html)
+		_, _ = client.ConvertHTMLToPDF(context.Background(), bytes.NewReader(html))
 	}
 }
-
-func BenchmarkConvertMarkdownToPDF(b *testing.B) {
-	mrt := &mockRoundTripper{}
-	client := NewClient(&http.Client{Transport: mrt}, "http://example.com")
-	index := []byte("<html><body>Index</body></html>")
-	mds := map[string][]byte{"bench.md": []byte("# bench\n\ncontent")}
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, _ = client.ConvertMarkdownToPDF(context.Background(), index, mds)
-	}
-}
-
-// End of file

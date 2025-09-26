@@ -1,6 +1,17 @@
 package gotenberg
 
+import "io"
+
 type ConvOption func(*convConfig)
+
+func WithFile(name string, r io.Reader) ConvOption {
+	return func(c *convConfig) {
+		if c.Files == nil {
+			c.Files = make(map[string]io.Reader)
+		}
+		c.Files[name] = r
+	}
+}
 
 func WithPaperSize(width, height float64) ConvOption {
 	return func(c *convConfig) {
@@ -48,50 +59,26 @@ func WithOutputFilename(filename string) ConvOption {
 	}
 }
 
-func WithWebhook(url, errorURL string) ConvOption {
+func WithWebhookSuccess(url, method string) ConvOption {
 	return func(c *convConfig) {
 		c.WebhookURL = &url
-		c.WebhookErrorURL = &errorURL
+		c.WebhookMethod = &method
 	}
 }
 
-func WithWebhookMethods(method, errorMethod string) ConvOption {
+func WithWebhookError(errorURL, errorMethod string) ConvOption {
 	return func(c *convConfig) {
-		c.WebhookMethod = &method
+		c.WebhookErrorURL = &errorURL
 		c.WebhookErrorMethod = &errorMethod
 	}
 }
 
-func WithWebhookExtraHeaders(headers map[string]string) ConvOption {
+func WithWebhookExtraHeader(name, value string) ConvOption {
 	return func(c *convConfig) {
-		if headers == nil {
-			c.WebhookExtraHeaders = nil
-			return
+		if c.WebhookExtraHeaders == nil {
+			c.WebhookExtraHeaders = make(map[string]string)
 		}
-		// Make a shallow copy to avoid retaining a reference to a caller-owned map
-		copied := make(map[string]string, len(headers))
-		for k, v := range headers {
-			copied[k] = v
-		}
-		c.WebhookExtraHeaders = copied
-	}
-}
-
-func WithHTMLAdditionalFiles(files map[string][]byte) ConvOption {
-	return func(c *convConfig) {
-		c.AdditionalFiles = files
-	}
-}
-
-func WithHTMLHeader(headerHTML []byte) ConvOption {
-	return func(c *convConfig) {
-		c.HeaderHTML = headerHTML
-	}
-}
-
-func WithHTMLFooter(footerHTML []byte) ConvOption {
-	return func(c *convConfig) {
-		c.FooterHTML = footerHTML
+		c.WebhookExtraHeaders[name] = value
 	}
 }
 

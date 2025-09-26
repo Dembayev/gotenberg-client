@@ -30,16 +30,15 @@ func main() {
 	invoice.Template.Execute(html, data)
 
 	logo := image.LogoPNG()
-	files := map[string][]byte{"logo.png": logo}
 
-	resp, err := client.ConvertHTMLToPDF(context.Background(), html.Bytes(),
+	resp, err := client.ConvertHTMLToPDF(context.Background(), html,
 		gotenberg.WithPrintBackground(true),
 		gotenberg.WithLandscape(false),
 		gotenberg.WithScale(1.0),
 		gotenberg.WithOutputFilename("invoice.pdf"),
 		gotenberg.WithPaperSizeA4(),
 		gotenberg.WithMargins(1.0, 1.0, 1.0, 1.0),
-		gotenberg.WithHTMLAdditionalFiles(files),
+		gotenberg.WithFile("logo.png", bytes.NewReader(logo)),
 	)
 	if err != nil {
 		log.Fatal(err)
