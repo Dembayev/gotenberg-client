@@ -31,76 +31,48 @@ func (c *Client) addFileField(writer *multipart.Writer, fieldName, filename stri
 }
 
 func (c *Client) addPageProperties(writer *multipart.Writer, props pageProperties) error {
-	if props.SinglePage != nil {
-		if err := writer.WriteField(FieldSinglePage, strconv.FormatBool(*props.SinglePage)); err != nil {
-			return err
+	boolFields := []struct {
+		value *bool
+		field string
+	}{
+		{props.SinglePage, FieldSinglePage},
+		{props.PreferCSSPageSize, FieldPreferCSSPageSize},
+		{props.GenerateDocumentOutline, FieldGenerateDocumentOutline},
+		{props.GenerateTaggedPDF, FieldGenerateTaggedPDF},
+		{props.PrintBackground, FieldPrintBackground},
+		{props.OmitBackground, FieldOmitBackground},
+		{props.Landscape, FieldLandscape},
+	}
+
+	for _, field := range boolFields {
+		if field.value != nil {
+			if err := writer.WriteField(field.field, strconv.FormatBool(*field.value)); err != nil {
+				return err
+			}
 		}
 	}
-	if props.PaperWidth != nil {
-		if err := writer.WriteField(FieldPaperWidth, strconv.FormatFloat(*props.PaperWidth, 'f', -1, 64)); err != nil {
-			return err
+
+	floatFields := []struct {
+		value *float64
+		field string
+	}{
+		{props.PaperWidth, FieldPaperWidth},
+		{props.PaperHeight, FieldPaperHeight},
+		{props.MarginTop, FieldMarginTop},
+		{props.MarginBottom, FieldMarginBottom},
+		{props.MarginLeft, FieldMarginLeft},
+		{props.MarginRight, FieldMarginRight},
+		{props.Scale, FieldScale},
+	}
+
+	for _, field := range floatFields {
+		if field.value != nil {
+			if err := writer.WriteField(field.field, strconv.FormatFloat(*field.value, 'f', -1, 64)); err != nil {
+				return err
+			}
 		}
 	}
-	if props.PaperHeight != nil {
-		if err := writer.WriteField(FieldPaperHeight, strconv.FormatFloat(*props.PaperHeight, 'f', -1, 64)); err != nil {
-			return err
-		}
-	}
-	if props.MarginTop != nil {
-		if err := writer.WriteField(FieldMarginTop, strconv.FormatFloat(*props.MarginTop, 'f', -1, 64)); err != nil {
-			return err
-		}
-	}
-	if props.MarginBottom != nil {
-		if err := writer.WriteField(FieldMarginBottom, strconv.FormatFloat(*props.MarginBottom, 'f', -1, 64)); err != nil {
-			return err
-		}
-	}
-	if props.MarginLeft != nil {
-		if err := writer.WriteField(FieldMarginLeft, strconv.FormatFloat(*props.MarginLeft, 'f', -1, 64)); err != nil {
-			return err
-		}
-	}
-	if props.MarginRight != nil {
-		if err := writer.WriteField(FieldMarginRight, strconv.FormatFloat(*props.MarginRight, 'f', -1, 64)); err != nil {
-			return err
-		}
-	}
-	if props.PreferCSSPageSize != nil {
-		if err := writer.WriteField(FieldPreferCSSPageSize, strconv.FormatBool(*props.PreferCSSPageSize)); err != nil {
-			return err
-		}
-	}
-	if props.GenerateDocumentOutline != nil {
-		if err := writer.WriteField(FieldGenerateDocumentOutline, strconv.FormatBool(*props.GenerateDocumentOutline)); err != nil {
-			return err
-		}
-	}
-	if props.GenerateTaggedPDF != nil {
-		if err := writer.WriteField(FieldGenerateTaggedPDF, strconv.FormatBool(*props.GenerateTaggedPDF)); err != nil {
-			return err
-		}
-	}
-	if props.PrintBackground != nil {
-		if err := writer.WriteField(FieldPrintBackground, strconv.FormatBool(*props.PrintBackground)); err != nil {
-			return err
-		}
-	}
-	if props.OmitBackground != nil {
-		if err := writer.WriteField(FieldOmitBackground, strconv.FormatBool(*props.OmitBackground)); err != nil {
-			return err
-		}
-	}
-	if props.Landscape != nil {
-		if err := writer.WriteField(FieldLandscape, strconv.FormatBool(*props.Landscape)); err != nil {
-			return err
-		}
-	}
-	if props.Scale != nil {
-		if err := writer.WriteField(FieldScale, strconv.FormatFloat(*props.Scale, 'f', -1, 64)); err != nil {
-			return err
-		}
-	}
+
 	if props.NativePageRanges != nil {
 		if err := writer.WriteField(FieldNativePageRanges, *props.NativePageRanges); err != nil {
 			return err
