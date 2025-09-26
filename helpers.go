@@ -17,11 +17,11 @@ func (c *Client) addFileField(writer *multipart.Writer, fieldName, filename stri
 
 	var buf []byte
 	if p := c.bufPool.Get(); p != nil {
-		buf = p.([]byte)
+		buf = *p.(*[]byte)
 	} else {
 		buf = make([]byte, defaultBufferSize)
 	}
-	defer c.bufPool.Put(buf)
+	defer func() { c.bufPool.Put(&buf) }()
 
 	_, err = io.CopyBuffer(part, content, buf)
 	return err

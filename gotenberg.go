@@ -33,7 +33,8 @@ func NewClient(httpClient *http.Client, baseURL string) *Client {
 
 	c.bufPool = sync.Pool{
 		New: func() any {
-			return make([]byte, defaultBufferSize)
+			buf := make([]byte, defaultBufferSize)
+			return &buf
 		},
 	}
 
