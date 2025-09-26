@@ -9,11 +9,15 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 )
+
+const defaultBufferSize = 1 << 10 // 1KB
 
 type Client struct {
 	httpClient *http.Client
 	baseURL    *url.URL
+	bufPool    sync.Pool
 }
 
 func NewClient(httpClient *http.Client, baseURL string) *Client {
@@ -22,18 +26,26 @@ func NewClient(httpClient *http.Client, baseURL string) *Client {
 		panic(fmt.Sprintf("invalid base URL: %s", err))
 	}
 
-	return &Client{
+	c := &Client{
 		httpClient: httpClient,
 		baseURL:    u,
 	}
+
+	c.bufPool = sync.Pool{
+		New: func() any {
+			return make([]byte, defaultBufferSize)
+		},
+	}
+
+	return c
 }
 
-func (c Client) ConvertURLToPDF(ctx context.Context, url string, opts ...ConvOption) (*http.Response, error) {
+func (c *Client) ConvertURLToPDF(ctx context.Context, url string, opts ...ClientOptions) (*http.Response, error) {
 	if url == "" {
 		return nil, fmt.Errorf("URL is required")
 	}
 
-	config := &convConfig{}
+	config := &clientOptions{}
 	for _, opt := range opts {
 		opt(config)
 	}
@@ -45,23 +57,7 @@ func (c Client) ConvertURLToPDF(ctx context.Context, url string, opts ...ConvOpt
 		return nil, fmt.Errorf("failed to write url field: %w", err)
 	}
 
-	if err := c.addPageProperties(writer, pageProperties{
-		SinglePage:              config.SinglePage,
-		PaperWidth:              config.PaperWidth,
-		PaperHeight:             config.PaperHeight,
-		MarginTop:               config.MarginTop,
-		MarginBottom:            config.MarginBottom,
-		MarginLeft:              config.MarginLeft,
-		MarginRight:             config.MarginRight,
-		PreferCSSPageSize:       config.PreferCSSPageSize,
-		GenerateDocumentOutline: config.GenerateDocumentOutline,
-		GenerateTaggedPDF:       config.GenerateTaggedPDF,
-		PrintBackground:         config.PrintBackground,
-		OmitBackground:          config.OmitBackground,
-		Landscape:               config.Landscape,
-		Scale:                   config.Scale,
-		NativePageRanges:        config.NativePageRanges,
-	}); err != nil {
+	if err := c.addPageProperties(writer, config.Page); err != nil {
 		return nil, fmt.Errorf("failed to add page properties: %w", err)
 	}
 
@@ -77,13 +73,7 @@ func (c Client) ConvertURLToPDF(ctx context.Context, url string, opts ...ConvOpt
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	req.ContentLength = int64(buf.Len())
 
-	c.addWebhookHeaders(req, webhookOptions{
-		URL:          config.WebhookURL,
-		ErrorURL:     config.WebhookErrorURL,
-		Method:       config.WebhookMethod,
-		ErrorMethod:  config.WebhookErrorMethod,
-		ExtraHeaders: config.WebhookExtraHeaders,
-	})
+	c.addWebhookHeaders(req, config.Webhook)
 
 	if config.OutputFilename != nil {
 		req.Header.Set("Gotenberg-Output-Filename", *config.OutputFilename)
@@ -92,12 +82,12 @@ func (c Client) ConvertURLToPDF(ctx context.Context, url string, opts ...ConvOpt
 	return c.httpClient.Do(req)
 }
 
-func (c Client) ConvertHTMLToPDF(ctx context.Context, indexHTML io.Reader, opts ...ConvOption) (*http.Response, error) {
+func (c *Client) ConvertHTMLToPDF(ctx context.Context, indexHTML io.Reader, opts ...ClientOptions) (*http.Response, error) {
 	if indexHTML == nil {
 		return nil, fmt.Errorf("indexHTML is required")
 	}
 
-	config := &convConfig{}
+	config := &clientOptions{}
 	for _, opt := range opts {
 		opt(config)
 	}
@@ -115,23 +105,7 @@ func (c Client) ConvertHTMLToPDF(ctx context.Context, indexHTML io.Reader, opts 
 		}
 	}
 
-	if err := c.addPageProperties(writer, pageProperties{
-		SinglePage:              config.SinglePage,
-		PaperWidth:              config.PaperWidth,
-		PaperHeight:             config.PaperHeight,
-		MarginTop:               config.MarginTop,
-		MarginBottom:            config.MarginBottom,
-		MarginLeft:              config.MarginLeft,
-		MarginRight:             config.MarginRight,
-		PreferCSSPageSize:       config.PreferCSSPageSize,
-		GenerateDocumentOutline: config.GenerateDocumentOutline,
-		GenerateTaggedPDF:       config.GenerateTaggedPDF,
-		PrintBackground:         config.PrintBackground,
-		OmitBackground:          config.OmitBackground,
-		Landscape:               config.Landscape,
-		Scale:                   config.Scale,
-		NativePageRanges:        config.NativePageRanges,
-	}); err != nil {
+	if err := c.addPageProperties(writer, config.Page); err != nil {
 		return nil, fmt.Errorf("failed to add page properties: %w", err)
 	}
 
@@ -147,13 +121,7 @@ func (c Client) ConvertHTMLToPDF(ctx context.Context, indexHTML io.Reader, opts 
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	req.ContentLength = int64(buf.Len())
 
-	c.addWebhookHeaders(req, webhookOptions{
-		URL:          config.WebhookURL,
-		ErrorURL:     config.WebhookErrorURL,
-		Method:       config.WebhookMethod,
-		ErrorMethod:  config.WebhookErrorMethod,
-		ExtraHeaders: config.WebhookExtraHeaders,
-	})
+	c.addWebhookHeaders(req, config.Webhook)
 
 	if config.OutputFilename != nil {
 		req.Header.Set("Gotenberg-Output-Filename", *config.OutputFilename)

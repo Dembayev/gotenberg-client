@@ -2,29 +2,35 @@ package gotenberg
 
 import "io"
 
-type convConfig struct {
+type clientOptions struct {
 	Files          map[string]io.Reader
 	OutputFilename *string
+	Page           pageProperties
+	Webhook        webhookOptions
+}
 
+type pageProperties struct {
+	SinglePage              *bool
 	PaperWidth              *float64
 	PaperHeight             *float64
 	MarginTop               *float64
 	MarginBottom            *float64
 	MarginLeft              *float64
 	MarginRight             *float64
-	Scale                   *float64
-	SinglePage              *bool
 	PreferCSSPageSize       *bool
 	GenerateDocumentOutline *bool
 	GenerateTaggedPDF       *bool
 	PrintBackground         *bool
 	OmitBackground          *bool
 	Landscape               *bool
+	Scale                   *float64
+	NativePageRanges        *string
+}
 
-	NativePageRanges    *string
-	WebhookURL          *string
-	WebhookErrorURL     *string
-	WebhookMethod       *string
-	WebhookErrorMethod  *string
-	WebhookExtraHeaders map[string]string
+type webhookOptions struct {
+	URL          *string
+	ErrorURL     *string
+	Method       *string
+	ErrorMethod  *string
+	ExtraHeaders map[string]string
 }

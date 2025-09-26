@@ -13,3 +13,29 @@ var (
 	PaperSizeA5      = [2]float64{5.83, 8.27}
 	PaperSizeA6      = [2]float64{4.13, 5.83}
 )
+
+const (
+	FieldSinglePage              = "singlePage"
+	FieldPaperWidth              = "paperWidth"
+	FieldPaperHeight             = "paperHeight"
+	FieldMarginTop               = "marginTop"
+	FieldMarginBottom            = "marginBottom"
+	FieldMarginLeft              = "marginLeft"
+	FieldMarginRight             = "marginRight"
+	FieldPreferCSSPageSize       = "preferCssPageSize"
+	FieldGenerateDocumentOutline = "generateDocumentOutline"
+	FieldGenerateTaggedPDF       = "generateTaggedPdf"
+	FieldPrintBackground         = "printBackground"
+	FieldOmitBackground          = "omitBackground"
+	FieldLandscape               = "landscape"
+	FieldScale                   = "scale"
+	FieldNativePageRanges        = "nativePageRanges"
+)
+
+const (
+	HeaderWebhookURL              = "Gotenberg-Webhook-Url"
+	HeaderWebhookErrorURL         = "Gotenberg-Webhook-Error-Url"
+	HeaderWebhookMethod           = "Gotenberg-Webhook-Method"
+	HeaderWebhookErrorMethod      = "Gotenberg-Webhook-Error-Method"
+	HeaderWebhookExtraHTTPHeaders = "Gotenberg-Webhook-Extra-Http-Headers"
+)
