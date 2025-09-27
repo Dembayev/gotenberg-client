@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/nativebpm/gotenberg-client"
 )
@@ -16,7 +15,6 @@ import (
 func main() {
 	gotenbergURL := `http://localhost:3000`
 
-	// Example 1: Complete Builder Pattern - Client with HTML conversion
 	slog.Info("Example 1: Complete Builder Pattern with HTML conversion")
 
 	htmlContent := `
@@ -134,7 +132,6 @@ p {
 	font-size: 16px;
 }`
 
-	// Using the complete builder pattern
 	resp, err := gotenberg.NewClientBuilder(http.DefaultClient, gotenbergURL).
 		ConvertHTML().
 		WithFile("styles.css", strings.NewReader(cssContent)).
@@ -169,83 +166,4 @@ p {
 		"pdf_size_bytes", n,
 		"content_type", resp.Header.Get("Content-Type"),
 		"output_file", "advanced-builder-demo.pdf")
-
-	// Example 2: URL conversion with Builder Pattern
-	slog.Info("Example 2: URL conversion with Builder Pattern")
-
-	urlResp, err := gotenberg.NewClientBuilder(http.DefaultClient, gotenbergURL).
-		ConvertURL().
-		PaperSizeLetter().
-		Margins(0.5, 0.5, 0.5, 0.5).
-		Landscape(true).
-		PrintBackground(false).
-		OutputFilename("url-conversion-demo.pdf").
-		Execute(context.Background(), "https://example.com")
-
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer urlResp.Body.Close()
-
-	if urlResp.StatusCode != http.StatusOK {
-		log.Fatalf("unexpected status code for URL conversion: %d", urlResp.StatusCode)
-	}
-
-	urlOutFile, err := os.Create("./url-conversion-demo.pdf")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer urlOutFile.Close()
-
-	urlN, err := io.Copy(urlOutFile, urlResp.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	slog.Info("URL conversion demo PDF generated successfully",
-		"pdf_size_bytes", urlN,
-		"content_type", urlResp.Header.Get("Content-Type"),
-		"output_file", "url-conversion-demo.pdf")
-
-	// Example 3: Traditional approach (for comparison)
-	slog.Info("Example 3: Traditional approach for comparison")
-
-	httpClient := &http.Client{
-		Timeout: 30 * time.Second,
-	}
-
-	traditionalClientBuilder := gotenberg.NewClientBuilder(httpClient, gotenbergURL)
-
-	traditionalResp, err := traditionalClientBuilder.ConvertHTML().
-		PaperSizeA4().
-		Margins(1.0, 1.0, 1.0, 1.0).
-		PrintBackground(true).
-		OutputFilename("traditional-approach.pdf").
-		Execute(context.Background(), strings.NewReader(htmlContent))
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer traditionalResp.Body.Close()
-
-	if traditionalResp.StatusCode != http.StatusOK {
-		log.Fatalf("unexpected status code for traditional approach: %d", traditionalResp.StatusCode)
-	}
-
-	traditionalOutFile, err := os.Create("./traditional-approach.pdf")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer traditionalOutFile.Close()
-
-	traditionalN, err := io.Copy(traditionalOutFile, traditionalResp.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	slog.Info("Traditional approach PDF generated successfully",
-		"pdf_size_bytes", traditionalN,
-		"content_type", traditionalResp.Header.Get("Content-Type"),
-		"output_file", "traditional-approach.pdf")
-
-	slog.Info("All demos completed successfully! Check the generated PDF files.")
 }
