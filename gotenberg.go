@@ -3,7 +3,6 @@ package gotenberg
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -11,20 +10,6 @@ import (
 	"net/url"
 	"strings"
 	"sync"
-)
-
-var (
-	PaperSizeLetter  = [2]float64{8.5, 11}
-	PaperSizeLegal   = [2]float64{8.5, 14}
-	PaperSizeTabloid = [2]float64{11, 17}
-	PaperSizeLedger  = [2]float64{17, 11}
-	PaperSizeA0      = [2]float64{33.1, 46.8}
-	PaperSizeA1      = [2]float64{23.4, 33.1}
-	PaperSizeA2      = [2]float64{16.54, 23.4}
-	PaperSizeA3      = [2]float64{11.7, 16.54}
-	PaperSizeA4      = [2]float64{8.27, 11.7}
-	PaperSizeA5      = [2]float64{5.83, 8.27}
-	PaperSizeA6      = [2]float64{4.13, 5.83}
 )
 
 const (
@@ -54,7 +39,40 @@ const (
 )
 
 const (
-	defaultBufferSize = 1 << 12 // 4KB
+	FieldURL       = "url"
+	FieldFiles     = "files"
+	FileIndexHTML  = "index.html"
+	FileFooterHTML = "footer.html"
+	FileHeaderHTML = "header.html"
+	FileStylesCSS  = "styles.css"
+)
+
+const (
+	bufferSize = 1 << 12 // 4096 bytes (4 KB)
+)
+
+const (
+	ConvertHTML = "html"
+	ConvertURL  = "url"
+)
+
+var (
+	routesURI = map[string]string{
+		ConvertHTML: "/forms/chromium/convert/html",
+		ConvertURL:  "/forms/chromium/convert/url",
+	}
+
+	PaperSizeLetter  = [2]float64{8.5, 11}
+	PaperSizeLegal   = [2]float64{8.5, 14}
+	PaperSizeTabloid = [2]float64{11, 17}
+	PaperSizeLedger  = [2]float64{17, 11}
+	PaperSizeA0      = [2]float64{33.1, 46.8}
+	PaperSizeA1      = [2]float64{23.4, 33.1}
+	PaperSizeA2      = [2]float64{16.54, 23.4}
+	PaperSizeA3      = [2]float64{11.7, 16.54}
+	PaperSizeA4      = [2]float64{8.27, 11.7}
+	PaperSizeA5      = [2]float64{5.83, 8.27}
+	PaperSizeA6      = [2]float64{4.13, 5.83}
 )
 
 type Client struct {
@@ -63,16 +81,19 @@ type Client struct {
 	buffer     *bytes.Buffer
 	writer     *multipart.Writer
 	bufPool    sync.Pool
+	err        error
 }
 
 func NewClient(httpClient *http.Client, baseURL string) *Client {
 	u, err := url.Parse(strings.TrimSuffix(baseURL, "/"))
 	if err != nil {
-		panic(fmt.Sprintf("invalid base URL: %s", err))
+		return &Client{
+			err: fmt.Errorf("invalid base URL: %w", err),
+		}
 	}
 
 	buf := &bytes.Buffer{}
-	buf.Grow(8192)
+	buf.Grow(bufferSize)
 
 	c := &Client{
 		httpClient: httpClient,
@@ -83,7 +104,7 @@ func NewClient(httpClient *http.Client, baseURL string) *Client {
 
 	c.bufPool = sync.Pool{
 		New: func() any {
-			buf := make([]byte, 0, defaultBufferSize)
+			buf := make([]byte, 0, bufferSize)
 			return &buf
 		},
 	}
@@ -91,91 +112,27 @@ func NewClient(httpClient *http.Client, baseURL string) *Client {
 	return c
 }
 
-func (c *Client) WriteHTML(html io.Reader) error {
-	return c.addFileField(c.writer, "files", "index.html", html)
-}
-
-func (c *Client) WriteFile(filename string, content io.Reader) error {
-	return c.addFileField(c.writer, "files", filename, content)
-}
-
-func (c *Client) WriteURL(url string) error {
-	return c.writer.WriteField("url", url)
-}
-
-func (c *Client) WritePaperSize(width, height float64) error {
-	if err := c.writer.WriteField(FieldPaperWidth, fmt.Sprintf("%g", width)); err != nil {
-		return err
-	}
-	return c.writer.WriteField(FieldPaperHeight, fmt.Sprintf("%g", height))
-}
-
-func (c *Client) WriteMargins(top, right, bottom, left float64) error {
-	fields := []struct {
-		name  string
-		value float64
-	}{
-		{FieldMarginTop, top},
-		{FieldMarginRight, right},
-		{FieldMarginBottom, bottom},
-		{FieldMarginLeft, left},
+func (c *Client) File(filename string, content io.Reader) *Client {
+	if c.err != nil {
+		return c
 	}
 
-	for _, field := range fields {
-		if err := c.writer.WriteField(field.name, fmt.Sprintf("%g", field.value)); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (c *Client) WriteBoolProperty(field string, value bool) error {
-	return c.writer.WriteField(field, fmt.Sprintf("%t", value))
-}
-
-func (c *Client) WriteStringProperty(field, value string) error {
-	return c.writer.WriteField(field, value)
-}
-
-// Webhook поддержка
-func (c *Client) SetWebhookSuccess(url, method string) error {
-	if err := c.writer.WriteField("webhookURL", url); err != nil {
-		return err
-	}
-	return c.writer.WriteField("webhookMethod", method)
-}
-
-func (c *Client) SetWebhookError(url, method string) error {
-	if err := c.writer.WriteField("webhookErrorURL", url); err != nil {
-		return err
-	}
-	return c.writer.WriteField("webhookErrorMethod", method)
-}
-
-func (c *Client) SetWebhookHeaders(headers map[string]string) error {
-	if len(headers) == 0 {
-		return nil
+	if c.writer == nil {
+		c.err = fmt.Errorf("client not properly initialized")
+		return c
 	}
 
-	headersJSON, err := json.Marshal(headers)
+	part, err := c.writer.CreateFormFile(FieldFiles, filename)
 	if err != nil {
-		return err
-	}
-
-	return c.writer.WriteField("webhookExtraHTTPHeaders", string(headersJSON))
-}
-
-func (c *Client) addFileField(writer *multipart.Writer, fieldName, filename string, content io.Reader) error {
-	part, err := writer.CreateFormFile(fieldName, filename)
-	if err != nil {
-		return err
+		c.err = fmt.Errorf("failed to create form file: %w", err)
+		return c
 	}
 
 	var buf []byte
 	if p := c.bufPool.Get(); p != nil {
-		buf = (*p.(*[]byte))[:defaultBufferSize]
+		buf = (*p.(*[]byte))[:bufferSize]
 	} else {
-		buf = make([]byte, defaultBufferSize)
+		buf = make([]byte, bufferSize)
 	}
 	defer func() {
 		buf = buf[:0]
@@ -183,18 +140,108 @@ func (c *Client) addFileField(writer *multipart.Writer, fieldName, filename stri
 	}()
 
 	_, err = io.CopyBuffer(part, content, buf)
-	return err
+	if err != nil {
+		c.err = fmt.Errorf("failed to copy buffer: %w", err)
+		return c
+	}
+	return c
 }
 
-func (c *Client) ConvertHTML(ctx context.Context) (*http.Response, error) {
-	return c.executeRequest(ctx, "/forms/chromium/convert/html")
+func (c *Client) String(field string, value string) *Client {
+	if c.err != nil {
+		return c
+	}
+
+	if c.writer == nil {
+		c.err = fmt.Errorf("client not properly initialized")
+		return c
+	}
+
+	err := c.writer.WriteField(field, value)
+	if err != nil {
+		c.err = fmt.Errorf("failed to write field %q: %w", field, err)
+		return c
+	}
+	return c
 }
 
-func (c *Client) ConvertURL(ctx context.Context) (*http.Response, error) {
-	return c.executeRequest(ctx, "/forms/chromium/convert/url")
+func (c *Client) URL(url string) *Client {
+	return c.String(FieldURL, url)
 }
 
-func (c *Client) executeRequest(ctx context.Context, endpoint string) (*http.Response, error) {
+func (c *Client) IndexHTML(html io.Reader) *Client {
+	return c.File(FileIndexHTML, html)
+}
+
+func (c *Client) FooterHTML(html io.Reader) *Client {
+	return c.File(FileFooterHTML, html)
+}
+
+func (c *Client) HeaderHTML(html io.Reader) *Client {
+	return c.File(FileHeaderHTML, html)
+}
+
+func (c *Client) StylesCSS(css io.Reader) *Client {
+	return c.File(FileStylesCSS, css)
+}
+
+func (c *Client) Bool(field string, value bool) *Client {
+	return c.String(field, fmt.Sprintf("%t", value))
+}
+
+func (c *Client) Float(field string, value float64) *Client {
+	return c.String(field, fmt.Sprintf("%g", value))
+}
+
+func (c *Client) paperSize(wh [2]float64) *Client {
+	return c.Float(FieldPaperWidth, wh[0]).
+		Float(FieldPaperHeight, wh[1])
+}
+
+func (c *Client) PaperSize(width, height float64) *Client {
+	return c.paperSize([2]float64{width, height})
+}
+
+func (c *Client) PaperSizeA4() *Client {
+	return c.paperSize(PaperSizeA4)
+}
+
+func (c *Client) PaperSizeLetter() *Client {
+	return c.paperSize(PaperSizeLetter)
+}
+
+func (c *Client) Margins(top, right, bottom, left float64) *Client {
+	return c.Float(FieldMarginTop, top).
+		Float(FieldMarginRight, right).
+		Float(FieldMarginBottom, bottom).
+		Float(FieldMarginLeft, left)
+}
+
+func (c *Client) ClientError() error {
+	return c.err
+}
+
+func (c *Client) Execute(ctx context.Context, route string) (*http.Response, error) {
+	defer func() {
+		c.buffer.Reset()
+		c.writer = multipart.NewWriter(c.buffer)
+		c.err = nil
+	}()
+
+	uri, ok := routesURI[route]
+
+	if !ok {
+		return nil, fmt.Errorf("unknown route: %s", route)
+	}
+
+	if c.err != nil {
+		return nil, c.err
+	}
+
+	if c.buffer == nil || c.writer == nil {
+		return nil, fmt.Errorf("client not properly initialized")
+	}
+
 	if err := c.writer.Close(); err != nil {
 		return nil, fmt.Errorf("failed to close writer: %w", err)
 	}
@@ -202,7 +249,7 @@ func (c *Client) executeRequest(ctx context.Context, endpoint string) (*http.Res
 	req, err := http.NewRequestWithContext(
 		ctx,
 		"POST",
-		c.baseURL.JoinPath(endpoint).String(),
+		c.baseURL.JoinPath(uri).String(),
 		c.buffer,
 	)
 	if err != nil {
@@ -215,15 +262,10 @@ func (c *Client) executeRequest(ctx context.Context, endpoint string) (*http.Res
 	return c.httpClient.Do(req)
 }
 
-func (c *Client) Reset() {
-	c.buffer.Reset()
-	c.writer = multipart.NewWriter(c.buffer)
+func (c *Client) ConvertHTML(ctx context.Context) (*http.Response, error) {
+	return c.Execute(ctx, ConvertHTML)
 }
 
-func (c *Client) ContentType() string {
-	return c.writer.FormDataContentType()
-}
-
-func (c *Client) BufferSize() int {
-	return c.buffer.Len()
+func (c *Client) ConvertURL(ctx context.Context) (*http.Response, error) {
+	return c.Execute(ctx, ConvertURL)
 }
