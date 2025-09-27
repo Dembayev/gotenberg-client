@@ -26,7 +26,7 @@ func main() {
 		Timeout: 90 * time.Second,
 	}
 
-	clientBuilder := gotenberg.NewClientBuilder(httpClient, gotenbergURL)
+	client := gotenberg.NewClient(httpClient, gotenbergURL)
 
 	data := model.InvoiceData
 	html := bytes.NewBuffer(nil)
@@ -34,16 +34,36 @@ func main() {
 
 	logo := image.LogoPNG()
 
-	// Using builder pattern with webhook configuration
-	resp, err := clientBuilder.ConvertHTML().
-		WithFile("logo.png", bytes.NewReader(logo)).
-		PrintBackground(true).
-		OutputFilename("invoice_async.pdf").
-		WebhookSuccess("http://host.docker.internal:28080/success", "POST").
-		WebhookError("http://host.docker.internal:28080/error", "POST").
-		WebhookExtraHeader("Authorization", "Bearer your-token").
-		WebhookExtraHeader("X-Custom-Header", "custom-value").
-		Execute(context.Background(), html)
+	if err := client.WriteHTML(html); err != nil {
+		log.Fatal("Error writing HTML:", err)
+	}
+
+	if err := client.WriteFile("logo.png", bytes.NewReader(logo)); err != nil {
+		log.Fatal("Error writing logo:", err)
+	}
+
+	if err := client.WriteBoolProperty(gotenberg.FieldPrintBackground, true); err != nil {
+		log.Fatal("Error setting print background:", err)
+	}
+
+	if err := client.SetWebhookSuccess("http://host.docker.internal:28080/success", "POST"); err != nil {
+		log.Fatal("Error setting webhook success:", err)
+	}
+
+	if err := client.SetWebhookError("http://host.docker.internal:28080/error", "POST"); err != nil {
+		log.Fatal("Error setting webhook error:", err)
+	}
+
+	webhookHeaders := map[string]string{
+		"Authorization":   "Bearer your-token",
+		"X-Custom-Header": "custom-value",
+	}
+
+	if err := client.SetWebhookHeaders(webhookHeaders); err != nil {
+		log.Fatal("Error setting webhook headers:", err)
+	}
+
+	resp, err := client.Execute(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}

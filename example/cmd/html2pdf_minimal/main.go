@@ -23,7 +23,7 @@ func main() {
 		Timeout: 90 * time.Second,
 	}
 
-	clientBuilder := gotenberg.NewClientBuilder(httpClient, gotenbergURL)
+	client := gotenberg.NewClient(httpClient, gotenbergURL)
 
 	data := model.InvoiceData
 	html := bytes.NewBuffer(nil)
@@ -31,9 +31,15 @@ func main() {
 
 	logo := image.LogoPNG()
 
-	resp, err := clientBuilder.ConvertHTML().
-		WithFile("logo.png", bytes.NewReader(logo)).
-		Execute(context.Background(), html)
+	if err := client.WriteHTML(html); err != nil {
+		log.Fatal("Error writing HTML:", err)
+	}
+
+	if err := client.WriteFile("logo.png", bytes.NewReader(logo)); err != nil {
+		log.Fatal("Error writing logo:", err)
+	}
+
+	resp, err := client.Execute(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}

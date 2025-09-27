@@ -23,7 +23,7 @@ func main() {
 		Timeout: 90 * time.Second,
 	}
 
-	clientBuilder := gotenberg.NewClientBuilder(httpClient, gotenbergURL)
+	client := gotenberg.NewClient(httpClient, gotenbergURL)
 	data := model.InvoiceData
 
 	html := bytes.NewBuffer(nil)
@@ -31,15 +31,35 @@ func main() {
 
 	logo := image.LogoPNG()
 
-	resp, err := clientBuilder.ConvertHTML().
-		WithFile("logo.png", bytes.NewReader(logo)).
-		PrintBackground(true).
-		Landscape(false).
-		Scale(1.0).
-		OutputFilename("invoice.pdf").
-		PaperSizeA4().
-		Margins(1.0, 1.0, 1.0, 1.0).
-		Execute(context.Background(), html)
+	if err := client.WriteHTML(html); err != nil {
+		log.Fatal("Error writing HTML:", err)
+	}
+
+	if err := client.WriteFile("logo.png", bytes.NewReader(logo)); err != nil {
+		log.Fatal("Error writing logo:", err)
+	}
+
+	if err := client.WritePaperSize(gotenberg.PaperSizeA4[0], gotenberg.PaperSizeA4[1]); err != nil {
+		log.Fatal("Error setting paper size:", err)
+	}
+
+	if err := client.WriteMargins(1.0, 1.0, 1.0, 1.0); err != nil {
+		log.Fatal("Error setting margins:", err)
+	}
+
+	if err := client.WriteBoolProperty(gotenberg.FieldPrintBackground, true); err != nil {
+		log.Fatal("Error setting print background:", err)
+	}
+
+	if err := client.WriteBoolProperty(gotenberg.FieldLandscape, false); err != nil {
+		log.Fatal("Error setting landscape:", err)
+	}
+
+	if err := client.WriteStringProperty(gotenberg.FieldScale, "1.0"); err != nil {
+		log.Fatal("Error setting scale:", err)
+	}
+
+	resp, err := client.Execute(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}
