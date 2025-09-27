@@ -12,11 +12,6 @@ type URLConversionBuilder struct {
 	config *clientOptions
 }
 
-func (ucb *URLConversionBuilder) WithURL(url string) *URLConversionBuilder {
-	ucb.url = url
-	return ucb
-}
-
 func (ucb *URLConversionBuilder) PaperSize(width, height float64) *URLConversionBuilder {
 	ucb.config.Page.PaperWidth = &width
 	ucb.config.Page.PaperHeight = &height
@@ -125,7 +120,7 @@ func (ucb *URLConversionBuilder) PageRanges(ranges string) *URLConversionBuilder
 	return ucb
 }
 
-func (ucb *URLConversionBuilder) Execute(ctx context.Context) (*http.Response, error) {
+func (ucb *URLConversionBuilder) Execute(ctx context.Context, url string) (*http.Response, error) {
 	if ucb.url == "" {
 		return nil, fmt.Errorf("URL is required")
 	}

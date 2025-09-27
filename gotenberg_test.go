@@ -134,12 +134,11 @@ func BenchmarkOptionsBuilder(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _ = clientBuilder.ConvertHTML().
-			WithHTML(html).
 			PaperSizeA4().
 			Margins(1.0, 1.0, 1.0, 1.0).
 			Landscape(false).
 			PrintBackground(true).
-			Execute(context.Background())
+			Execute(context.Background(), strings.NewReader(html))
 	}
 }
 
@@ -152,7 +151,6 @@ func TestOptionsBuilder_Success(t *testing.T) {
 
 	// Test builder with complex configuration
 	resp, err := clientBuilder.ConvertHTML().
-		WithHTML(html).
 		WithFile("styles.css", cssFile).
 		PaperSizeA4().
 		Margins(1.5, 1.0, 1.5, 1.0).
@@ -164,7 +162,7 @@ func TestOptionsBuilder_Success(t *testing.T) {
 		WebhookError("https://webhook.example.com/error", "POST").
 		WebhookExtraHeader("Authorization", "Bearer token123").
 		WebhookExtraHeader("X-Custom", "test-value").
-		Execute(context.Background())
+		Execute(context.Background(), strings.NewReader(html))
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

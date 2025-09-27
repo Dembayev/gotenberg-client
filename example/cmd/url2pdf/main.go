@@ -23,11 +23,10 @@ func main() {
 
 	// Using builder pattern for URL to PDF conversion
 	resp, err := clientBuilder.ConvertURL().
-		WithURL("https://example.com").
 		PrintBackground(true).
 		OutputFilename("example.pdf").
 		PaperSizeLetter().
-		Execute(context.Background())
+		Execute(context.Background(), "https://example.com")
 	if err != nil {
 		log.Fatal(err)
 	}

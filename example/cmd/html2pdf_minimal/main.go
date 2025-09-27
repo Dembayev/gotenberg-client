@@ -32,9 +32,8 @@ func main() {
 	logo := image.LogoPNG()
 
 	resp, err := clientBuilder.ConvertHTML().
-		WithHTMLReader(html).
 		WithFile("logo.png", bytes.NewReader(logo)).
-		Execute(context.Background())
+		Execute(context.Background(), html)
 	if err != nil {
 		log.Fatal(err)
 	}

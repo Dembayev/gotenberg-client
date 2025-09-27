@@ -36,7 +36,6 @@ func main() {
 
 	// Using builder pattern with webhook configuration
 	resp, err := clientBuilder.ConvertHTML().
-		WithHTMLReader(html).
 		WithFile("logo.png", bytes.NewReader(logo)).
 		PrintBackground(true).
 		OutputFilename("invoice_async.pdf").
@@ -44,7 +43,7 @@ func main() {
 		WebhookError("http://host.docker.internal:28080/error", "POST").
 		WebhookExtraHeader("Authorization", "Bearer your-token").
 		WebhookExtraHeader("X-Custom-Header", "custom-value").
-		Execute(context.Background())
+		Execute(context.Background(), html)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/nativebpm/gotenberg-client"
@@ -136,14 +137,13 @@ p {
 	// Using the complete builder pattern
 	resp, err := gotenberg.NewClientBuilder(http.DefaultClient, gotenbergURL).
 		ConvertHTML().
-		WithHTML(htmlContent).
-		WithCSS(cssContent).
+		WithFile("styles.css", strings.NewReader(cssContent)).
 		PaperSizeA4().
 		Margins(1.2, 1.0, 1.2, 1.0).
 		PrintBackground(true).
 		Scale(0.95).
 		OutputFilename("advanced-builder-demo.pdf").
-		Execute(context.Background())
+		Execute(context.Background(), strings.NewReader(htmlContent))
 
 	if err != nil {
 		log.Fatal(err)
@@ -175,13 +175,12 @@ p {
 
 	urlResp, err := gotenberg.NewClientBuilder(http.DefaultClient, gotenbergURL).
 		ConvertURL().
-		WithURL("https://example.com").
 		PaperSizeLetter().
 		Margins(0.5, 0.5, 0.5, 0.5).
 		Landscape(true).
 		PrintBackground(false).
 		OutputFilename("url-conversion-demo.pdf").
-		Execute(context.Background())
+		Execute(context.Background(), "https://example.com")
 
 	if err != nil {
 		log.Fatal(err)
@@ -218,12 +217,11 @@ p {
 	traditionalClientBuilder := gotenberg.NewClientBuilder(httpClient, gotenbergURL)
 
 	traditionalResp, err := traditionalClientBuilder.ConvertHTML().
-		WithHTML(htmlContent).
 		PaperSizeA4().
 		Margins(1.0, 1.0, 1.0, 1.0).
 		PrintBackground(true).
 		OutputFilename("traditional-approach.pdf").
-		Execute(context.Background())
+		Execute(context.Background(), strings.NewReader(htmlContent))
 	if err != nil {
 		log.Fatal(err)
 	}

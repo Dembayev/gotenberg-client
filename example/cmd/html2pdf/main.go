@@ -32,7 +32,6 @@ func main() {
 	logo := image.LogoPNG()
 
 	resp, err := clientBuilder.ConvertHTML().
-		WithHTMLReader(html).
 		WithFile("logo.png", bytes.NewReader(logo)).
 		PrintBackground(true).
 		Landscape(false).
@@ -40,7 +39,7 @@ func main() {
 		OutputFilename("invoice.pdf").
 		PaperSizeA4().
 		Margins(1.0, 1.0, 1.0, 1.0).
-		Execute(context.Background())
+		Execute(context.Background(), html)
 	if err != nil {
 		log.Fatal(err)
 	}

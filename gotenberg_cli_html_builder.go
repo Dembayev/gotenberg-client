@@ -2,30 +2,13 @@ package gotenberg
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
-	"strings"
 )
 
 type HTMLConversionBuilder struct {
-	client    *Client
-	indexHTML io.Reader
-	config    *clientOptions
-}
-
-func (hcb *HTMLConversionBuilder) WithHTML(html string) *HTMLConversionBuilder {
-	hcb.indexHTML = strings.NewReader(html)
-	return hcb
-}
-
-func (hcb *HTMLConversionBuilder) WithHTMLReader(reader io.Reader) *HTMLConversionBuilder {
-	hcb.indexHTML = reader
-	return hcb
-}
-
-func (hcb *HTMLConversionBuilder) WithCSS(css string) *HTMLConversionBuilder {
-	return hcb.WithFile("styles.css", strings.NewReader(css))
+	client *Client
+	config *clientOptions
 }
 
 func (hcb *HTMLConversionBuilder) WithFile(filename string, reader io.Reader) *HTMLConversionBuilder {
@@ -141,13 +124,10 @@ func (hcb *HTMLConversionBuilder) PageRanges(ranges string) *HTMLConversionBuild
 	return hcb
 }
 
-func (hcb *HTMLConversionBuilder) Execute(ctx context.Context) (*http.Response, error) {
-	if hcb.indexHTML == nil {
-		return nil, fmt.Errorf("HTML content is required")
-	}
+func (hcb *HTMLConversionBuilder) Execute(ctx context.Context, html io.Reader) (*http.Response, error) {
 	config := *hcb.config
 	options := func(c *clientOptions) {
 		*c = config
 	}
-	return hcb.client.ConvertHTMLToPDF(ctx, hcb.indexHTML, options)
+	return hcb.client.ConvertHTMLToPDF(ctx, html, options)
 }

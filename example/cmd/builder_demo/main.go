@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/nativebpm/gotenberg-client"
@@ -98,14 +99,13 @@ p {
 
 	// Using the fluent builder pattern - much cleaner than functional options!
 	resp, err := clientBuilder.ConvertHTML().
-		WithHTML(htmlContent).
 		WithFile("styles.css", bytes.NewReader([]byte(cssContent))).
 		PaperSizeA4().
 		Margins(1.2, 1.0, 1.2, 1.0). // top, right, bottom, left in inches
 		PrintBackground(true).       // Enable CSS background printing
 		Scale(0.9).                  // Slightly reduce scale for better fit
 		OutputFilename("builder-pattern-demo.pdf").
-		Execute(context.Background())
+		Execute(context.Background(), strings.NewReader(htmlContent))
 	if err != nil {
 		log.Fatal(err)
 	}
