@@ -3,6 +3,7 @@ package gotenberg
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -86,6 +87,7 @@ type Client struct {
 	buffer     *bytes.Buffer
 	writer     *multipart.Writer
 	bufPool    sync.Pool
+	headers    map[string]string
 	err        error
 }
 
@@ -105,6 +107,7 @@ func NewClient(httpClient *http.Client, baseURL string) *Client {
 		baseURL:    u,
 		buffer:     buf,
 		writer:     multipart.NewWriter(buf),
+		headers:    make(map[string]string),
 	}
 
 	c.bufPool = sync.Pool{
@@ -222,16 +225,45 @@ func (c *Client) Margins(top, right, bottom, left float64) *Client {
 		Float(FieldMarginLeft, left)
 }
 
-func (c *Client) ClientError() error {
+func (c *Client) Err() error {
 	return c.err
 }
 
-func (c *Client) Execute(ctx context.Context, route string, h ...Header) (*http.Response, error) {
-	defer func() {
-		c.buffer.Reset()
-		c.writer = multipart.NewWriter(c.buffer)
-		c.err = nil
-	}()
+func (c *Client) Header(name, value string) *Client {
+	if c.err != nil {
+		return c
+	}
+	c.headers[name] = value
+	return c
+}
+
+func (c *Client) WebhookURL(url, method string) *Client {
+	return c.Header(HeaderWebhookURL, url).Header(HeaderWebhookMethod, method)
+}
+
+func (c *Client) WebhookErrorURL(url, method string) *Client {
+	return c.Header(HeaderWebhookErrorURL, url).Header(HeaderWebhookErrorMethod, method)
+}
+
+func (c *Client) WebhookExtraHTTPHeaders(headers map[string]string) *Client {
+	h, err := json.Marshal(headers)
+	if err != nil {
+		c.err = fmt.Errorf("failed to marshal webhook extra HTTP headers: %w", err)
+		return c
+	}
+	return c.Header(HeaderWebhookExtraHTTPHeaders, string(h))
+}
+
+func (c *Client) ResetClient() *Client {
+	c.buffer.Reset()
+	c.writer = multipart.NewWriter(c.buffer)
+	c.headers = make(map[string]string)
+	c.err = nil
+	return c
+}
+
+func (c *Client) Execute(ctx context.Context, route string) (*http.Response, error) {
+	defer c.ResetClient()
 
 	uri, ok := routesURI[route]
 
@@ -264,17 +296,17 @@ func (c *Client) Execute(ctx context.Context, route string, h ...Header) (*http.
 	req.Header.Set("Content-Type", c.writer.FormDataContentType())
 	req.ContentLength = int64(c.buffer.Len())
 
-	for _, header := range h {
-		req.Header.Set(header.Name, header.Value)
+	for name, value := range c.headers {
+		req.Header.Set(name, value)
 	}
 
 	return c.httpClient.Do(req)
 }
 
-func (c *Client) ConvertHTML(ctx context.Context, h ...Header) (*http.Response, error) {
-	return c.Execute(ctx, ConvertHTML, h...)
+func (c *Client) ConvertHTML(ctx context.Context) (*http.Response, error) {
+	return c.Execute(ctx, ConvertHTML)
 }
 
-func (c *Client) ConvertURL(ctx context.Context, h ...Header) (*http.Response, error) {
-	return c.Execute(ctx, ConvertURL, h...)
+func (c *Client) ConvertURL(ctx context.Context) (*http.Response, error) {
+	return c.Execute(ctx, ConvertURL)
 }

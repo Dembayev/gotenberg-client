@@ -565,13 +565,13 @@ func TestClientError(t *testing.T) {
 	httpClient := newMockHTTPClient(200, "PDF content")
 	client := NewClient(httpClient, "http://localhost:3000")
 
-	if client.ClientError() != nil {
+	if client.Err() != nil {
 		t.Error("new client should have no error")
 	}
 
 	client.err = io.ErrUnexpectedEOF
 
-	if client.ClientError() != io.ErrUnexpectedEOF {
+	if client.Err() != io.ErrUnexpectedEOF {
 		t.Error("ClientError should return the set error")
 	}
 }
@@ -582,5 +582,116 @@ func TestInvalidBaseURL(t *testing.T) {
 
 	if client.err == nil {
 		t.Error("expected error for invalid base URL")
+	}
+}
+
+func TestClientHeader(t *testing.T) {
+	httpClient := &http.Client{}
+	client := NewClient(httpClient, "http://localhost:3000")
+
+	// Тест установки заголовка
+	client.Header("X-Custom-Header", "custom-value")
+
+	if client.headers["X-Custom-Header"] != "custom-value" {
+		t.Errorf("expected header value 'custom-value', got '%s'", client.headers["X-Custom-Header"])
+	}
+}
+
+func TestClientWebhookMethods(t *testing.T) {
+	httpClient := &http.Client{}
+	client := NewClient(httpClient, "http://localhost:3000")
+
+	// Тест всех webhook методов
+	client.WebhookURL("http://example.com/webhook", "POST").
+		WebhookErrorURL("http://example.com/error", "POST").
+		WebhookExtraHTTPHeaders(map[string]string{"X-Test": "value"})
+
+	tests := []struct {
+		header   string
+		expected string
+	}{
+		{HeaderWebhookURL, "http://example.com/webhook"},
+		{HeaderWebhookErrorURL, "http://example.com/error"},
+		{HeaderWebhookMethod, "POST"},
+		{HeaderWebhookErrorMethod, "PUT"},
+		{HeaderWebhookExtraHTTPHeaders, `{"X-Test": "value"}`},
+	}
+
+	for _, test := range tests {
+		if client.headers[test.header] != test.expected {
+			t.Errorf("expected header %s to be '%s', got '%s'",
+				test.header, test.expected, client.headers[test.header])
+		}
+	}
+}
+
+func TestClientClearHeaders(t *testing.T) {
+	httpClient := &http.Client{}
+	client := NewClient(httpClient, "http://localhost:3000")
+
+	// Устанавливаем заголовки
+	client.Header("X-Test-1", "value1").
+		Header("X-Test-2", "value2")
+
+	if len(client.headers) != 2 {
+		t.Errorf("expected 2 headers, got %d", len(client.headers))
+	}
+
+	// Очищаем заголовки
+	client.ResetClient()
+
+	if len(client.headers) != 0 {
+		t.Errorf("expected 0 headers after clear, got %d", len(client.headers))
+	}
+}
+
+func TestClientHeadersReset(t *testing.T) {
+	var firstRequest, secondRequest *http.Request
+	requestCount := 0
+
+	// Создаем мок сервер
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount++
+		if requestCount == 1 {
+			firstRequest = r
+		} else {
+			secondRequest = r
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	httpClient := &http.Client{}
+	client := NewClient(httpClient, server.URL)
+
+	// Первый запрос с заголовками
+	client.IndexHTML(strings.NewReader("<html><body>Test1</body></html>")).
+		Header("X-Test-Header", "test-value")
+
+	resp1, err := client.ConvertHTML(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error in first request: %v", err)
+	}
+	resp1.Body.Close()
+
+	// Второй запрос - заголовки должны быть сброшены
+	client.IndexHTML(strings.NewReader("<html><body>Test2</body></html>"))
+
+	resp2, err := client.ConvertHTML(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error in second request: %v", err)
+	}
+	resp2.Body.Close()
+
+	// Проверяем, что в первом запросе заголовок есть
+	if firstRequest.Header.Get("X-Test-Header") != "test-value" {
+		t.Errorf("expected X-Test-Header to be 'test-value' in first request, got '%s'",
+			firstRequest.Header.Get("X-Test-Header"))
+	}
+
+	// Проверяем, что во втором запросе заголовка нет
+	if secondRequest.Header.Get("X-Test-Header") != "" {
+		t.Errorf("expected X-Test-Header to be empty in second request, got '%s'",
+			secondRequest.Header.Get("X-Test-Header"))
 	}
 }

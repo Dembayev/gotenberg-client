@@ -26,7 +26,7 @@ go get github.com/nativebpm/gotenberg-client
 
 ## Quick Start
 
-### HTML to PDF
+### HTML to PDF (Builder Pattern)
 
 ```go
 package main
@@ -45,17 +45,16 @@ func main() {
     httpClient := &http.Client{Timeout: 30 * time.Second}
     client := gotenberg.NewClient(httpClient, "http://localhost:3000")
     
-    // Write HTML content directly to multipart stream
+    // Configure and execute conversion using builder pattern
     htmlContent := `<html><body><h1>Hello Gotenberg!</h1></body></html>`
-    client.WriteHTML(bytes.NewReader([]byte(htmlContent)))
     
-    // Configure paper size and margins
-    client.WritePaperSize(gotenberg.PaperSizeA4[0], gotenberg.PaperSizeA4[1])
-    client.WriteMargins(1.0, 1.0, 1.0, 1.0)
-    client.WriteBoolProperty(gotenberg.FieldPrintBackground, true)
-    
-    // Execute conversion
-    resp, err := client.Execute(context.Background())
+    resp, err := client.
+        IndexHTML(bytes.NewReader([]byte(htmlContent))).
+        PaperSizeA4().
+        Margins(1.0, 1.0, 1.0, 1.0).
+        Bool(gotenberg.FieldPrintBackground, true).
+        ConvertHTML(context.Background())
+        
     if err != nil {
         panic(err)
     }
@@ -65,20 +64,20 @@ func main() {
 }
 ```
 
-### URL to PDF
+### URL to PDF (Builder Pattern)
 
 ```go
 func main() {
     httpClient := &http.Client{Timeout: 30 * time.Second}
     client := gotenberg.NewClient(httpClient, "http://localhost:3000")
     
-    // Write URL and configure paper
-    client.WriteURL("https://example.com")
-    client.WritePaperSize(gotenberg.PaperSizeLetter[0], gotenberg.PaperSizeLetter[1])
-    client.WriteBoolProperty(gotenberg.FieldLandscape, true)
-    
-    // Execute URL conversion
-    resp, err := client.ExecuteURL(context.Background())
+    // Configure and execute URL conversion using builder pattern
+    resp, err := client.
+        URL("https://example.com").
+        PaperSizeLetter().
+        Bool(gotenberg.FieldLandscape, true).
+        ConvertURL(context.Background())
+        
     if err != nil {
         panic(err)
     }
@@ -166,31 +165,27 @@ func main() {
 }
 ```
 
-### Webhook Configuration
+### Webhook Configuration (Builder Pattern)
 
 ```go
 func main() {
     httpClient := &http.Client{Timeout: 30 * time.Second}
     client := gotenberg.NewClient(httpClient, "http://localhost:3000")
     
-    // Configure document
+    // Configure document with webhook settings using builder pattern
     htmlContent := `<html><body><h1>Async Document</h1></body></html>`
-    client.WriteHTML(bytes.NewReader([]byte(htmlContent)))
-    client.WritePaperSize(gotenberg.PaperSizeLetter[0], gotenberg.PaperSizeLetter[1])
     
-    // Configure webhooks for async processing
-    client.SetWebhookSuccess("https://your-domain.com/webhook/success", "POST")
-    client.SetWebhookError("https://your-domain.com/webhook/error", "POST")
-    
-    // Add custom headers
-    headers := map[string]string{
-        "Authorization": "Bearer your-token",
-        "X-Request-ID": "unique-request-id",
-    }
-    client.SetWebhookHeaders(headers)
-    
-    // Execute async conversion
-    resp, err := client.Execute(context.Background())
+    resp, err := client.
+        IndexHTML(bytes.NewReader([]byte(htmlContent))).
+        PaperSizeA4().
+        Bool(gotenberg.FieldPrintBackground, true).
+        WebhookURL("https://your-domain.com/webhook/success").
+        WebhookMethod("POST").
+        WebhookErrorURL("https://your-domain.com/webhook/error").
+        WebhookErrorMethod("POST").
+        WebhookExtraHTTPHeaders(`{"Authorization": "Bearer your-token", "X-Request-ID": "unique-request-id"}`).
+        ConvertHTML(context.Background())
+        
     if err != nil {
         log.Fatal(err)
     }
@@ -198,6 +193,32 @@ func main() {
     
     // For webhook requests, response will be 200 OK without PDF content
     log.Println("Async conversion started, check webhook for completion")
+}
+```
+
+### Custom Headers with Builder Pattern
+
+```go
+func main() {
+    httpClient := &http.Client{Timeout: 30 * time.Second}
+    client := gotenberg.NewClient(httpClient, "http://localhost:3000")
+    
+    htmlContent := `<html><body><h1>Document with Custom Headers</h1></body></html>`
+    
+    resp, err := client.
+        IndexHTML(bytes.NewReader([]byte(htmlContent))).
+        PaperSizeA4().
+        Header("X-Custom-Header-1", "value1").
+        Header("X-Custom-Header-2", "value2").
+        Header("Authorization", "Bearer token").
+        ConvertHTML(context.Background())
+        
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer resp.Body.Close()
+    
+    // Process PDF response...
 }
 ```
 
@@ -243,19 +264,41 @@ func (c *Client) WriteBoolProperty(field string, value bool) error
 func (c *Client) WriteStringProperty(field, value string) error
 ```
 
-### Webhook Methods
+### Header Methods (Builder Pattern)
 
-Configure async processing:
+Configure request headers using fluent builder pattern:
 
 ```go
-// Set success webhook
-func (c *Client) SetWebhookSuccess(url, method string) error
+// Set any custom header
+func (c *Client) Header(name, value string) *Client
 
-// Set error webhook  
-func (c *Client) SetWebhookError(url, method string) error
+// Webhook-specific convenience methods
+func (c *Client) WebhookURL(url string) *Client
+func (c *Client) WebhookErrorURL(url string) *Client  
+func (c *Client) WebhookMethod(method string) *Client
+func (c *Client) WebhookErrorMethod(method string) *Client
+func (c *Client) WebhookExtraHTTPHeaders(headers string) *Client
 
-// Set custom webhook headers
-func (c *Client) SetWebhookHeaders(headers map[string]string) error
+// Clear all headers
+func (c *Client) ClearHeaders() *Client
+```
+
+### Migration from Old API
+
+**Old way (still supported):**
+```go
+resp, err := client.ConvertHTML(context.Background(),
+    gotenberg.Header{Name: "X-Custom", Value: "value"},
+    gotenberg.Header{Name: gotenberg.HeaderWebhookURL, Value: "http://example.com"},
+)
+```
+
+**New way (recommended):**
+```go
+resp, err := client.
+    Header("X-Custom", "value").
+    WebhookURL("http://example.com").
+    ConvertHTML(context.Background())
 ```
 
 ### Execution Methods
