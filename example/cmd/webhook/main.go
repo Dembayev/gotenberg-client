@@ -37,29 +37,18 @@ func main() {
 	resp, err := client.IndexHTML(html).
 		File("logo.png", bytes.NewReader(logo)).
 		Bool(gotenberg.FieldPrintBackground, true).
-		ConvertHTML(context.Background())
+		ConvertHTML(context.Background(),
+			gotenberg.Header{Name: gotenberg.HeaderWebhookMethod, Value: "POST"},
+			gotenberg.Header{Name: gotenberg.HeaderWebhookErrorURL, Value: "http://host.docker.internal:28080/error"},
+			gotenberg.Header{Name: gotenberg.HeaderWebhookMethod, Value: "POST"},
+			gotenberg.Header{Name: gotenberg.HeaderWebhookErrorURL, Value: "http://host.docker.internal:28080/error"},
+			gotenberg.Header{Name: gotenberg.HeaderWebhookExtraHTTPHeaders, Value: `{"MyHeader": "MyValue"}`},
+		)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer resp.Body.Close()
-
-	// if err := client.SetWebhookSuccess("http://host.docker.internal:28080/success", "POST"); err != nil {
-	// 	log.Fatal("Error setting webhook success:", err)
-	// }
-
-	// if err := client.SetWebhookError("http://host.docker.internal:28080/error", "POST"); err != nil {
-	// 	log.Fatal("Error setting webhook error:", err)
-	// }
-
-	// webhookHeaders := map[string]string{
-	// 	"Authorization":   "Bearer your-token",
-	// 	"X-Custom-Header": "custom-value",
-	// }
-
-	// if err := client.SetWebhookHeaders(webhookHeaders); err != nil {
-	// 	log.Fatal("Error setting webhook headers:", err)
-	// }
 
 	slog.Info("Async HTML to PDF conversion started",
 		"trace", resp.Header.Get("Gotenberg-Trace"))

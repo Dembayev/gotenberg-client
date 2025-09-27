@@ -75,6 +75,11 @@ var (
 	PaperSizeA6      = [2]float64{4.13, 5.83}
 )
 
+type Header struct {
+	Name  string
+	Value string
+}
+
 type Client struct {
 	httpClient *http.Client
 	baseURL    *url.URL
@@ -221,7 +226,7 @@ func (c *Client) ClientError() error {
 	return c.err
 }
 
-func (c *Client) Execute(ctx context.Context, route string) (*http.Response, error) {
+func (c *Client) Execute(ctx context.Context, route string, h ...Header) (*http.Response, error) {
 	defer func() {
 		c.buffer.Reset()
 		c.writer = multipart.NewWriter(c.buffer)
@@ -259,13 +264,17 @@ func (c *Client) Execute(ctx context.Context, route string) (*http.Response, err
 	req.Header.Set("Content-Type", c.writer.FormDataContentType())
 	req.ContentLength = int64(c.buffer.Len())
 
+	for _, header := range h {
+		req.Header.Set(header.Name, header.Value)
+	}
+
 	return c.httpClient.Do(req)
 }
 
-func (c *Client) ConvertHTML(ctx context.Context) (*http.Response, error) {
-	return c.Execute(ctx, ConvertHTML)
+func (c *Client) ConvertHTML(ctx context.Context, h ...Header) (*http.Response, error) {
+	return c.Execute(ctx, ConvertHTML, h...)
 }
 
-func (c *Client) ConvertURL(ctx context.Context) (*http.Response, error) {
-	return c.Execute(ctx, ConvertURL)
+func (c *Client) ConvertURL(ctx context.Context, h ...Header) (*http.Response, error) {
+	return c.Execute(ctx, ConvertURL, h...)
 }
