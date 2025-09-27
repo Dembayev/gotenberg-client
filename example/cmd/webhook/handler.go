@@ -32,7 +32,6 @@ func webhookHandler(name string) http.HandlerFunc {
 			"method", r.Method,
 			"path", r.URL.Path,
 			"gotenberg-trace", r.Header.Get("Gotenberg-Trace"),
-			"authorization", r.Header.Get("Authorization"),
 			"x-custom-header", r.Header.Get("X-Custom-Header"),
 			"body lenth", n,
 		)

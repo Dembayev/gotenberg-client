@@ -39,10 +39,10 @@ func main() {
 		Bool(gotenberg.FieldPrintBackground, true).
 		ConvertHTML(context.Background(),
 			gotenberg.Header{Name: gotenberg.HeaderWebhookMethod, Value: "POST"},
+			gotenberg.Header{Name: gotenberg.HeaderWebhookURL, Value: "http://host.docker.internal:28080/error"},
+			gotenberg.Header{Name: gotenberg.HeaderWebhookErrorMethod, Value: "POST"},
 			gotenberg.Header{Name: gotenberg.HeaderWebhookErrorURL, Value: "http://host.docker.internal:28080/error"},
-			gotenberg.Header{Name: gotenberg.HeaderWebhookMethod, Value: "POST"},
-			gotenberg.Header{Name: gotenberg.HeaderWebhookErrorURL, Value: "http://host.docker.internal:28080/error"},
-			gotenberg.Header{Name: gotenberg.HeaderWebhookExtraHTTPHeaders, Value: `{"MyHeader": "MyValue"}`},
+			gotenberg.Header{Name: gotenberg.HeaderWebhookExtraHTTPHeaders, Value: `{"X-Custom-Header": "MyValue"}`},
 		)
 
 	if err != nil {
