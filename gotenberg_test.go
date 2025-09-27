@@ -128,31 +128,32 @@ func BenchmarkConvertHTMLToPDF(b *testing.B) {
 
 func BenchmarkOptionsBuilder(b *testing.B) {
 	mrt := &mockRoundTripper{}
-	client := NewClient(&http.Client{Transport: mrt}, "http://example.com")
-	html := []byte("<html><body>Benchmark</body></html>")
+	clientBuilder := NewClientBuilder(&http.Client{Transport: mrt}, "http://example.com")
+	html := "<html><body>Benchmark</body></html>"
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		opts := NewOptionsBuilder().
+		_, _ = clientBuilder.ConvertHTML().
+			WithHTML(html).
 			PaperSizeA4().
 			Margins(1.0, 1.0, 1.0, 1.0).
 			Landscape(false).
 			PrintBackground(true).
-			Build()
-		_, _ = client.ConvertHTMLToPDF(context.Background(), bytes.NewReader(html), opts)
+			Execute(context.Background())
 	}
 }
 
 func TestOptionsBuilder_Success(t *testing.T) {
 	mrt := &mockRoundTripper{}
-	client := NewClient(&http.Client{Transport: mrt}, "http://example.com")
+	clientBuilder := NewClientBuilder(&http.Client{Transport: mrt}, "http://example.com")
 
-	html := []byte("<html><body>Hello Builder</body></html>")
+	html := "<html><body>Hello Builder</body></html>"
 	cssFile := bytes.NewReader([]byte("body { color: red; }"))
 
 	// Test builder with complex configuration
-	options := NewOptionsBuilder().
-		File("styles.css", cssFile).
+	resp, err := clientBuilder.ConvertHTML().
+		WithHTML(html).
+		WithFile("styles.css", cssFile).
 		PaperSizeA4().
 		Margins(1.5, 1.0, 1.5, 1.0).
 		PrintBackground(true).
@@ -163,9 +164,8 @@ func TestOptionsBuilder_Success(t *testing.T) {
 		WebhookError("https://webhook.example.com/error", "POST").
 		WebhookExtraHeader("Authorization", "Bearer token123").
 		WebhookExtraHeader("X-Custom", "test-value").
-		Build()
+		Execute(context.Background())
 
-	resp, err := client.ConvertHTMLToPDF(context.Background(), bytes.NewReader(html), options)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

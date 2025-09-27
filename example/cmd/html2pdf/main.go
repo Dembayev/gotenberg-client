@@ -23,7 +23,7 @@ func main() {
 		Timeout: 90 * time.Second,
 	}
 
-	client := gotenberg.NewClient(httpClient, gotenbergURL)
+	clientBuilder := gotenberg.NewClientBuilder(httpClient, gotenbergURL)
 	data := model.InvoiceData
 
 	html := bytes.NewBuffer(nil)
@@ -31,17 +31,16 @@ func main() {
 
 	logo := image.LogoPNG()
 
-	options := gotenberg.NewOptionsBuilder().
-		File("logo.png", bytes.NewReader(logo)).
+	resp, err := clientBuilder.ConvertHTML().
+		WithHTMLReader(html).
+		WithFile("logo.png", bytes.NewReader(logo)).
 		PrintBackground(true).
 		Landscape(false).
 		Scale(1.0).
 		OutputFilename("invoice.pdf").
 		PaperSizeA4().
 		Margins(1.0, 1.0, 1.0, 1.0).
-		Build()
-
-	resp, err := client.ConvertHTMLToPDF(context.Background(), html, options)
+		Execute(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}

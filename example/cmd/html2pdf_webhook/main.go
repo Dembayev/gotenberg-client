@@ -26,7 +26,7 @@ func main() {
 		Timeout: 90 * time.Second,
 	}
 
-	client := gotenberg.NewClient(httpClient, gotenbergURL)
+	clientBuilder := gotenberg.NewClientBuilder(httpClient, gotenbergURL)
 
 	data := model.InvoiceData
 	html := bytes.NewBuffer(nil)
@@ -35,17 +35,16 @@ func main() {
 	logo := image.LogoPNG()
 
 	// Using builder pattern with webhook configuration
-	options := gotenberg.NewOptionsBuilder().
-		File("logo.png", bytes.NewReader(logo)).
+	resp, err := clientBuilder.ConvertHTML().
+		WithHTMLReader(html).
+		WithFile("logo.png", bytes.NewReader(logo)).
 		PrintBackground(true).
 		OutputFilename("invoice_async.pdf").
 		WebhookSuccess("http://host.docker.internal:28080/success", "POST").
 		WebhookError("http://host.docker.internal:28080/error", "POST").
 		WebhookExtraHeader("Authorization", "Bearer your-token").
 		WebhookExtraHeader("X-Custom-Header", "custom-value").
-		Build()
-
-	resp, err := client.ConvertHTMLToPDF(context.Background(), html, options)
+		Execute(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -20,7 +20,7 @@ func main() {
 		Timeout: 90 * time.Second,
 	}
 
-	client := gotenberg.NewClient(httpClient, gotenbergURL)
+	clientBuilder := gotenberg.NewClientBuilder(httpClient, gotenbergURL)
 
 	// Example HTML content
 	htmlContent := `
@@ -97,20 +97,15 @@ p {
 }`
 
 	// Using the fluent builder pattern - much cleaner than functional options!
-	options := gotenberg.NewOptionsBuilder().
-		File("styles.css", bytes.NewReader([]byte(cssContent))).
+	resp, err := clientBuilder.ConvertHTML().
+		WithHTML(htmlContent).
+		WithFile("styles.css", bytes.NewReader([]byte(cssContent))).
 		PaperSizeA4().
 		Margins(1.2, 1.0, 1.2, 1.0). // top, right, bottom, left in inches
 		PrintBackground(true).       // Enable CSS background printing
 		Scale(0.9).                  // Slightly reduce scale for better fit
 		OutputFilename("builder-pattern-demo.pdf").
-		Build()
-
-	resp, err := client.ConvertHTMLToPDF(
-		context.Background(),
-		bytes.NewReader([]byte(htmlContent)),
-		options,
-	)
+		Execute(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}

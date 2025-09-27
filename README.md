@@ -26,6 +26,42 @@ go get github.com/nativebpm/gotenberg-client
 
 ## Quick Start
 
+### Modern Builder Pattern (Recommended)
+
+```go
+package main
+
+import (
+    "context"
+    "time"
+    "github.com/nativebpm/gotenberg-client"
+)
+
+func main() {
+    htmlContent := `<html><body><h1>Hello Gotenberg!</h1></body></html>`
+    
+    // Create PDF with fluent builder API
+    resp, err := gotenberg.NewClientBuilder("http://localhost:3000").
+        WithTimeout(30 * time.Second).
+        ConvertHTML().
+        WithHTML(htmlContent).
+        PaperSizeA4().
+        Margins(1.0, 1.0, 1.0, 1.0).
+        PrintBackground(true).
+        OutputFilename("hello.pdf").
+        Execute(context.Background())
+    
+    if err != nil {
+        panic(err)
+    }
+    defer resp.Body.Close()
+    
+    // Save response to file...
+}
+```
+
+### Traditional Approach
+
 ```go
 package main
 
@@ -55,7 +91,44 @@ func main() {
 
 ## Usage Examples
 
-### Simple URL to PDF conversion
+### URL to PDF with Builder Pattern
+
+```go
+// Convert a webpage to PDF with custom settings
+resp, err := gotenberg.NewClientBuilder("http://localhost:3000").
+    ConvertURL().
+    WithURL("https://example.com").
+    PaperSizeLetter().
+    Landscape(true).
+    Margins(0.5, 0.5, 0.5, 0.5).
+    PrintBackground(false).
+    OutputFilename("webpage.pdf").
+    Execute(context.Background())
+```
+
+### HTML with CSS and Assets
+
+```go
+htmlContent := `<html><head><link rel="stylesheet" href="styles.css"></head>
+<body><h1 class="title">Styled Document</h1><img src="logo.png"></body></html>`
+
+cssContent := `.title { color: #007bff; font-size: 24px; }`
+
+// Load logo image
+logoFile, _ := os.Open("logo.png")
+defer logoFile.Close()
+
+resp, err := gotenberg.NewClientBuilder("http://localhost:3000").
+    ConvertHTML().
+    WithHTML(htmlContent).
+    WithCSS(cssContent).
+    WithFile("logo.png", logoFile).
+    PaperSizeA4().
+    PrintBackground(true).
+    Execute(context.Background())
+```
+
+### Traditional API (still supported)
 
 ```go
 ctx := context.Background()
@@ -114,7 +187,45 @@ resp, err := cli.ConvertURLToPDF(ctx, "https://example.com", options)
 
 ## API Reference
 
-### Client Methods
+### Builder Pattern API
+
+The modern builder pattern provides a fluent, chainable interface for PDF generation:
+
+```go
+// ClientBuilder - creates and configures HTTP client
+gotenberg.NewClientBuilder(baseURL string) *ClientBuilder
+  .WithTimeout(duration) *ClientBuilder
+  .WithHTTPClient(client) *ClientBuilder
+  .ConvertHTML() *HTMLConversionBuilder
+  .ConvertURL() *URLConversionBuilder
+  .Build() *Client
+
+// HTMLConversionBuilder - configures HTML to PDF conversion
+.WithHTML(html string) *HTMLConversionBuilder
+.WithHTMLReader(reader io.Reader) *HTMLConversionBuilder
+.WithCSS(css string) *HTMLConversionBuilder
+.WithFile(filename string, reader io.Reader) *HTMLConversionBuilder
+.Execute(ctx context.Context) (*http.Response, error)
+
+// URLConversionBuilder - configures URL to PDF conversion
+.WithURL(url string) *URLConversionBuilder
+.Execute(ctx context.Context) (*http.Response, error)
+
+// Common configuration methods available on both builders
+.PaperSizeA4() / .PaperSizeLetter() / .PaperSizeA3() / etc.
+.Margins(top, right, bottom, left float64)
+.Landscape(enabled bool)
+.PrintBackground(enabled bool)
+.Scale(scale float64)
+.OutputFilename(filename string)
+.WebhookSuccess(url, method string)
+.WebhookError(url, method string)
+.WebhookExtraHeader(name, value string)
+```
+
+📖 **[Complete Builder Pattern Guide](BUILDER_PATTERN.md)** - Detailed examples and advanced usage
+
+### Traditional Client Methods
 
 #### `ConvertURLToPDF`
 Converts a web page to PDF.
@@ -176,11 +287,29 @@ options := gotenberg.NewOptionsBuilder().
 
 See the [examples](./example/) directory for complete working examples:
 
+**Builder Pattern Examples:**
+- [`advanced_builder_demo`](./example/cmd/advanced_builder_demo/) - **NEW**: Complete builder pattern showcase
+- [`builder_demo`](./example/cmd/builder_demo/) - Basic builder pattern usage
+
+**Traditional API Examples:**
 - [`html2pdf`](./example/cmd/html2pdf/) - HTML to PDF with CSS styling
 - [`html2pdf_minimal`](./example/cmd/html2pdf_minimal/) - Minimal HTML conversion
 - [`url2pdf`](./example/cmd/url2pdf/) - URL to PDF conversion
 - [`html2pdf_webhook`](./example/cmd/html2pdf_webhook/) - Async processing with webhooks
-- [`builder_demo`](./example/cmd/builder_demo/) - Builder pattern showcase
+
+### Running Examples
+
+```bash
+# Start Gotenberg server
+docker run --rm -p 3000:3000 gotenberg/gotenberg:8
+
+# Run builder pattern examples
+cd example/cmd/advanced_builder_demo && go run .
+cd ../builder_demo && go run .
+
+# Run traditional examples
+cd ../html2pdf && go run .
+```
 
 ## Performance
 

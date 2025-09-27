@@ -19,16 +19,15 @@ func main() {
 		Timeout: 90 * time.Second,
 	}
 
-	client := gotenberg.NewClient(httpClient, gotenbergURL)
+	clientBuilder := gotenberg.NewClientBuilder(httpClient, gotenbergURL)
 
 	// Using builder pattern for URL to PDF conversion
-	options := gotenberg.NewOptionsBuilder().
+	resp, err := clientBuilder.ConvertURL().
+		WithURL("https://example.com").
 		PrintBackground(true).
 		OutputFilename("example.pdf").
 		PaperSizeLetter().
-		Build()
-
-	resp, err := client.ConvertURLToPDF(context.Background(), "https://example.com", options)
+		Execute(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}
