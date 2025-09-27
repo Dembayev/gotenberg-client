@@ -59,7 +59,7 @@ func main() {
 		log.Fatal("Error setting scale:", err)
 	}
 
-	resp, err := client.Execute(context.Background())
+	resp, err := client.ConvertHTML(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}

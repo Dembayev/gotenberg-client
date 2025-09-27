@@ -33,7 +33,7 @@ func main() {
 		log.Fatal("Error setting print background:", err)
 	}
 
-	resp, err := client.ExecuteURL(context.Background())
+	resp, err := client.ConvertURL(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}

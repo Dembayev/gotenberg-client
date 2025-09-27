@@ -63,7 +63,7 @@ func main() {
 		log.Fatal("Error setting webhook headers:", err)
 	}
 
-	resp, err := client.Execute(context.Background())
+	resp, err := client.ConvertHTML(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}

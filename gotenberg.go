@@ -186,15 +186,11 @@ func (c *Client) addFileField(writer *multipart.Writer, fieldName, filename stri
 	return err
 }
 
-func (c *Client) Execute(ctx context.Context) (*http.Response, error) {
-	return c.ExecuteHTML(ctx)
-}
-
-func (c *Client) ExecuteHTML(ctx context.Context) (*http.Response, error) {
+func (c *Client) ConvertHTML(ctx context.Context) (*http.Response, error) {
 	return c.executeRequest(ctx, "/forms/chromium/convert/html")
 }
 
-func (c *Client) ExecuteURL(ctx context.Context) (*http.Response, error) {
+func (c *Client) ConvertURL(ctx context.Context) (*http.Response, error) {
 	return c.executeRequest(ctx, "/forms/chromium/convert/url")
 }
 
