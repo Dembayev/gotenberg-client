@@ -4,7 +4,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/nativebpm/gotenberg-client)](https://goreportcard.com/report/github.com/nativebpm/gotenberg-client)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A high-performance Go client for the [Gotenberg](https://gotenberg.dev/) HTTP API with fluent interface and zero dependencies.
+A high-performance Go client for the [Gotenberg](https://gotenberg.dev/) HTTP API with fluent interface. Built using only Go standard library (via [http-client](https://github.com/nativebpm/http-client) dependency).
 
 ## Quick Start
 
@@ -45,6 +45,14 @@ func main() {
 ```bash
 go get github.com/nativebpm/gotenberg-client
 ```
+
+## Dependencies
+
+This client has minimal dependencies and relies only on:
+- Go standard library
+- [`github.com/nativebpm/http-client`](https://github.com/nativebpm/http-client) - A lightweight HTTP client that also uses only Go standard library
+
+No third-party dependencies are required, ensuring minimal bloat and maximum compatibility.
 
 ## 📄 License
 

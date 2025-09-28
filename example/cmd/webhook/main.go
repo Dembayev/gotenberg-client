@@ -52,7 +52,7 @@ func main() {
 	defer resp.Body.Close()
 
 	slog.Info("Async HTML to PDF conversion started",
-		"trace", resp.Header.Get(gotenberg.HeaderGotenbergTrace))
+		"gotenberg-trace", resp.GotenbergTrace)
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)

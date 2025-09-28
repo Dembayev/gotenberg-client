@@ -7,7 +7,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/nativebpm/gotenberg-client/pkg/httpclient"
+	httpclient "github.com/nativebpm/http-client"
 )
 
 const (
@@ -77,17 +77,17 @@ type Request struct {
 
 type Response struct {
 	*http.Response
-	trace string
+	GotenbergTrace string
 }
 
 func NewClient(httpClient *http.Client, baseURL string) (*Client, error) {
-	httpClientWrapper, err := httpclient.NewClient(httpClient, baseURL)
+	client, err := httpclient.NewClient(httpClient, baseURL)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Client{
-		Client: httpClientWrapper,
+		Client: client,
 	}, nil
 }
 
@@ -180,5 +180,5 @@ func (r *Request) Send() (*Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Response{Response: resp, trace: resp.Header.Get(HeaderGotenbergTrace)}, nil
+	return &Response{Response: resp, GotenbergTrace: resp.Header.Get(HeaderGotenbergTrace)}, nil
 }
