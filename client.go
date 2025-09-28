@@ -23,20 +23,25 @@ const (
 	ContentLength   = "Content-Length"
 )
 
+var bufferPool = sync.Pool{
+	New: func() any {
+		buf := make([]byte, 0, bufferSize)
+		return &buf
+	},
+}
+
 type Request struct {
-	c         *Client
+	client    *http.Client
 	request   *http.Request
 	multipart bool
 	writer    *multipart.Writer
 	buffer    *bytes.Buffer
-	bufPool   *sync.Pool
 	err       error
 }
 
 type Client struct {
 	baseURL *url.URL
 	client  *http.Client
-	bufPool sync.Pool
 }
 
 func NewClient(client *http.Client, baseURL string) (*Client, error) {
@@ -50,20 +55,12 @@ func NewClient(client *http.Client, baseURL string) (*Client, error) {
 		baseURL: u,
 	}
 
-	c.bufPool = sync.Pool{
-		New: func() any {
-			buf := make([]byte, 0, bufferSize)
-			return &buf
-		},
-	}
-
 	return c, nil
 }
 
 func (c *Client) MethodGet(ctx context.Context, path string) *Request {
 	req := &Request{
-		c:       c,
-		bufPool: &c.bufPool,
+		client: c.client,
 	}
 	req.request, req.err = http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL.JoinPath(path).String(), nil)
 	return req
@@ -71,8 +68,7 @@ func (c *Client) MethodGet(ctx context.Context, path string) *Request {
 
 func (c *Client) MethodPost(ctx context.Context, path string) *Request {
 	req := &Request{
-		c:       c,
-		bufPool: &c.bufPool,
+		client: c.client,
 	}
 	req.request, req.err = http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL.JoinPath(path).String(), nil)
 	return req
@@ -80,8 +76,7 @@ func (c *Client) MethodPost(ctx context.Context, path string) *Request {
 
 func (c *Client) MethodPut(ctx context.Context, path string) *Request {
 	req := &Request{
-		c:       c,
-		bufPool: &c.bufPool,
+		client: c.client,
 	}
 	req.request, req.err = http.NewRequestWithContext(ctx, http.MethodPut, c.baseURL.JoinPath(path).String(), nil)
 	return req
@@ -89,8 +84,7 @@ func (c *Client) MethodPut(ctx context.Context, path string) *Request {
 
 func (c *Client) MethodPatch(ctx context.Context, path string) *Request {
 	req := &Request{
-		c:       c,
-		bufPool: &c.bufPool,
+		client: c.client,
 	}
 	req.request, req.err = http.NewRequestWithContext(ctx, http.MethodPatch, c.baseURL.JoinPath(path).String(), nil)
 	return req
@@ -98,8 +92,7 @@ func (c *Client) MethodPatch(ctx context.Context, path string) *Request {
 
 func (c *Client) MethodDelete(ctx context.Context, path string) *Request {
 	req := &Request{
-		c:       c,
-		bufPool: &c.bufPool,
+		client: c.client,
 	}
 	req.request, req.err = http.NewRequestWithContext(ctx, http.MethodDelete, c.baseURL.JoinPath(path).String(), nil)
 	return req
@@ -260,14 +253,14 @@ func (r *Request) File(fieldName, filename string, content io.Reader) *Request {
 	}
 
 	var buf []byte
-	if p := r.bufPool.Get(); p != nil {
+	if p := bufferPool.Get(); p != nil {
 		buf = (*p.(*[]byte))[:bufferSize]
 	} else {
 		buf = make([]byte, bufferSize)
 	}
 	defer func() {
 		buf = buf[:0]
-		r.bufPool.Put(&buf)
+		bufferPool.Put(&buf)
 	}()
 
 	_, err = io.CopyBuffer(part, content, buf)
@@ -319,5 +312,5 @@ func (r *Request) Send() (*http.Response, error) {
 		r = r.Header(ContentLength, strconv.Itoa(r.buffer.Len()))
 	}
 
-	return r.c.client.Do(r.request)
+	return r.client.Do(r.request)
 }
