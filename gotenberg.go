@@ -92,28 +92,39 @@ func NewClient(httpClient *http.Client, baseURL string) (*Client, error) {
 }
 
 func (c *Client) ConvertHTML(ctx context.Context, html io.Reader) *Request {
-	req := c.Client.MethodPost(ctx, ConvertHTML).File(FieldFiles, FileIndexHTML, html)
-	return &Request{Request: req, err: req.Err()}
+	r := &Request{}
+	r.Request, r.err = c.Client.MethodPost(ctx, ConvertHTML).File(FieldFiles, FileIndexHTML, html).GetRequest()
+	return r
 }
 
 func (c *Client) ConvertURL(ctx context.Context, url string) *Request {
-	req := c.Client.MethodPost(ctx, ConvertURL).FormField(FieldURL, url)
-	return &Request{Request: req, err: req.Err()}
+	r := &Request{}
+	r.Request, r.err = c.Client.MethodPost(ctx, ConvertURL).FormField(FieldURL, url).GetRequest()
+	return r
 }
 
 func (r *Request) WebhookURLMethodPost(url string) *Request {
-	req := r.Request.Header(HeaderWebhookURL, url).Header(HeaderWebhookMethod, http.MethodPost)
-	return &Request{Request: req, err: req.Err()}
+	if r.err != nil {
+		return r
+	}
+	r.Request, r.err = r.Request.Header(HeaderWebhookURL, url).Header(HeaderWebhookMethod, http.MethodPost).GetRequest()
+	return r
 }
 
 func (r *Request) OutputFilename(filename string) *Request {
-	req := r.Request.Header(HeaderOutputFilename, filename)
-	return &Request{Request: req, err: req.Err()}
+	if r.err != nil {
+		return r
+	}
+	r.Request, r.err = r.Request.Header(HeaderOutputFilename, filename).GetRequest()
+	return r
 }
 
 func (r *Request) WebhookErrorURLMethodPost(url string) *Request {
-	req := r.Request.Header(HeaderWebhookErrorURL, url).Header(HeaderWebhookErrorMethod, http.MethodPost)
-	return &Request{Request: req, err: req.Err()}
+	if r.err != nil {
+		return r
+	}
+	r.Request, r.err = r.Request.Header(HeaderWebhookErrorURL, url).Header(HeaderWebhookErrorMethod, http.MethodPost).GetRequest()
+	return r
 }
 
 func (r *Request) WebhookExtraHeaders(headers map[string]string) *Request {
@@ -122,24 +133,33 @@ func (r *Request) WebhookExtraHeaders(headers map[string]string) *Request {
 		r.err = err
 		return r
 	}
-
-	req := r.Request.Header(HeaderWebhookExtraHTTPHeaders, string(jsonHeaders))
-	return &Request{Request: req, err: req.Err()}
+	r.Request, r.err = r.Request.Header(HeaderWebhookExtraHTTPHeaders, string(jsonHeaders)).GetRequest()
+	return r
 }
 
 func (r *Request) Bool(fieldName string, value bool) *Request {
-	req := r.Request.FormField(fieldName, fmt.Sprintf("%t", value))
-	return &Request{Request: req, err: req.Err()}
+	if r == nil {
+		return r
+	}
+	r.Request, r.err = r.Request.FormField(fieldName, fmt.Sprintf("%t", value)).GetRequest()
+	return r
 }
 
 func (r *Request) Float(fieldName string, value float64) *Request {
-	req := r.Request.FormField(fieldName, fmt.Sprintf("%g", value))
-	return &Request{Request: req, err: req.Err()}
+	if r == nil {
+		return r
+	}
+	r.Request, r.err = r.Request.FormField(fieldName, fmt.Sprintf("%g", value)).GetRequest()
+	return r
 }
 
 func (r *Request) PaperSize(width, height float64) *Request {
-	return r.Float(FieldPaperWidth, width).
-		Float(FieldPaperHeight, height)
+	if r == nil {
+		return r
+	}
+	r.Float(FieldPaperWidth, width)
+	r.Float(FieldPaperHeight, height)
+	return r
 }
 
 func (r *Request) PaperSizeA4() *Request {
@@ -151,25 +171,38 @@ func (r *Request) PaperSizeLetter() *Request {
 }
 
 func (r *Request) Margins(top, right, bottom, left float64) *Request {
-	return r.Float(FieldMarginTop, top).
-		Float(FieldMarginRight, right).
-		Float(FieldMarginBottom, bottom).
-		Float(FieldMarginLeft, left)
+	if r == nil {
+		return r
+	}
+	r.Float(FieldMarginTop, top)
+	r.Float(FieldMarginRight, right)
+	r.Float(FieldMarginBottom, bottom)
+	r.Float(FieldMarginLeft, left)
+	return r
 }
 
 func (r *Request) File(fieldName, filename string, content io.Reader) *Request {
-	req := r.Request.File(fieldName, filename, content)
-	return &Request{Request: req, err: req.Err()}
+	if r == nil {
+		return r
+	}
+	r.Request, r.err = r.Request.File(fieldName, filename, content).GetRequest()
+	return r
 }
 
 func (r *Request) Header(key, value string) *Request {
-	req := r.Request.Header(key, value)
-	return &Request{Request: req, err: req.Err()}
+	if r == nil {
+		return r
+	}
+	r.Request, r.err = r.Request.Header(key, value).GetRequest()
+	return r
 }
 
 func (r *Request) FormField(fieldName, value string) *Request {
-	req := r.Request.FormField(fieldName, value)
-	return &Request{Request: req, err: req.Err()}
+	if r == nil {
+		return r
+	}
+	r.Request, r.err = r.Request.FormField(fieldName, value).GetRequest()
+	return r
 }
 
 func (r *Request) Send() (*Response, error) {

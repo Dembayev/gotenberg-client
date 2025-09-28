@@ -4,4 +4,4 @@ go 1.21
 
 // replace github.com/nativebpm/http-client => ../http-client
 
-require github.com/nativebpm/http-client v0.0.3
+require github.com/nativebpm/http-client v0.0.5
