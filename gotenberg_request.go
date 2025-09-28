@@ -84,73 +84,67 @@ type Form struct {
 	bufPool   sync.Pool
 }
 
-type Request struct {
+type Client struct {
+	baseURL string
 	client  *http.Client
 	request *http.Request
 	err     error
 	Form
 }
 
-func NewReqest(ctx context.Context, client *http.Client, url string) *Request {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return &Request{
-			err: fmt.Errorf("failed to create request: %w", err),
-		}
-	}
-
-	return &Request{
+func NewClient(client *http.Client, baseURL string) *Client {
+	return &Client{
 		client:  client,
-		request: req,
+		baseURL: baseURL,
 	}
 }
 
-func (r *Request) MethodGet(ctx context.Context, client *http.Client, url string) *Request {
+func (r *Client) MethodGet(ctx context.Context, url string) *Client {
 	if r.err != nil {
 		return r
 	}
 
-	r.request.Method = http.MethodGet
+	r.request, r.err = http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	return r
 }
 
-func (r *Request) MethodPost(ctx context.Context, client *http.Client, url string) *Request {
+func (r *Client) MethodPost(ctx context.Context, url string) *Client {
 	if r.err != nil {
 		return r
 	}
 
-	r.request.Method = http.MethodPost
+	r.request, r.err = http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
 	return r
 }
 
-func (r *Request) MethodPut(ctx context.Context, client *http.Client, url string) *Request {
+func (r *Client) MethodPut(ctx context.Context, url string) *Client {
 	if r.err != nil {
 		return r
 	}
 
-	r.request.Method = http.MethodPut
+	r.request, r.err = http.NewRequestWithContext(ctx, http.MethodPut, url, nil)
 	return r
 }
 
-func (r *Request) MethodPatch(ctx context.Context, client *http.Client, url string) *Request {
+func (r *Client) MethodPatch(ctx context.Context, url string) *Client {
 	if r.err != nil {
 		return r
 	}
 
-	r.request.Method = http.MethodPatch
+	r.request, r.err = http.NewRequestWithContext(ctx, http.MethodPatch, url, nil)
 	return r
 }
 
-func (r *Request) MethodDelete(ctx context.Context, client *http.Client, url string) *Request {
+func (r *Client) MethodDelete(ctx context.Context, url string) *Client {
 	if r.err != nil {
 		return r
 	}
 
-	r.request.Method = http.MethodDelete
+	r.request, r.err = http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
 	return r
 }
 
-func (r *Request) Multipart() *Request {
+func (r *Client) Multipart() *Client {
 	if r.err != nil {
 		return r
 	}
@@ -173,7 +167,7 @@ func (r *Request) Multipart() *Request {
 	return r
 }
 
-func (r *Request) Header(key, value string) *Request {
+func (r *Client) Header(key, value string) *Client {
 	if r.err != nil {
 		return r
 	}
@@ -186,7 +180,7 @@ func (r *Request) Header(key, value string) *Request {
 	return r
 }
 
-func (r *Request) Headers(headers map[string]string) *Request {
+func (r *Client) Headers(headers map[string]string) *Client {
 	if r.err != nil {
 		return r
 	}
@@ -198,15 +192,15 @@ func (r *Request) Headers(headers map[string]string) *Request {
 	return r
 }
 
-func (r *Request) ContentType(contentType string) *Request {
+func (r *Client) ContentType(contentType string) *Client {
 	return r.Header(ContentType, contentType)
 }
 
-func (r *Request) JSONContentType() *Request {
+func (r *Client) JSONContentType() *Client {
 	return r.ContentType(ApplicationJSON)
 }
 
-func (r *Request) QueryParam(key, value string) *Request {
+func (r *Client) QueryParam(key, value string) *Client {
 	if r.err != nil {
 		return r
 	}
@@ -218,7 +212,7 @@ func (r *Request) QueryParam(key, value string) *Request {
 	return r
 }
 
-func (r *Request) QueryParams(params map[string]string) *Request {
+func (r *Client) QueryParams(params map[string]string) *Client {
 	if r.err != nil {
 		return r
 	}
@@ -232,7 +226,7 @@ func (r *Request) QueryParams(params map[string]string) *Request {
 	return r
 }
 
-func (r *Request) QueryValues(values url.Values) *Request {
+func (r *Client) QueryValues(values url.Values) *Client {
 	if r.err != nil {
 		return r
 	}
@@ -251,7 +245,7 @@ func (r *Request) QueryValues(values url.Values) *Request {
 	return r
 }
 
-func (r *Request) Body(body io.ReadCloser) *Request {
+func (r *Client) Body(body io.ReadCloser) *Client {
 	if r.err != nil {
 		return r
 	}
@@ -260,7 +254,7 @@ func (r *Request) Body(body io.ReadCloser) *Request {
 	return r
 }
 
-func (r *Request) BytesBody(body []byte) *Request {
+func (r *Client) BytesBody(body []byte) *Client {
 	if r.err != nil {
 		return r
 	}
@@ -271,11 +265,11 @@ func (r *Request) BytesBody(body []byte) *Request {
 	return r
 }
 
-func (r *Request) StringBody(body string) *Request {
+func (r *Client) StringBody(body string) *Client {
 	return r.BytesBody([]byte(body))
 }
 
-func (r *Request) JSONBody(body any) *Request {
+func (r *Client) JSONBody(body any) *Client {
 	if r.err != nil {
 		return r
 	}
@@ -292,15 +286,15 @@ func (r *Request) JSONBody(body any) *Request {
 	return r
 }
 
-func (r *Request) WebhookURLMethodPost(url string) *Request {
+func (r *Client) WebhookURLMethodPost(url string) *Client {
 	return r.Header(HeaderWebhookURL, url).Header(HeaderWebhookMethod, http.MethodPost)
 }
 
-func (r *Request) WebhookErrorURLMethodPost(url string) *Request {
+func (r *Client) WebhookErrorURLMethodPost(url string) *Client {
 	return r.Header(HeaderWebhookErrorURL, url).Header(HeaderWebhookErrorMethod, http.MethodPost)
 }
 
-func (r *Request) WebhookExtraHeaders(headers map[string]string) *Request {
+func (r *Client) WebhookExtraHeaders(headers map[string]string) *Client {
 	if r.err != nil {
 		return r
 	}
@@ -314,7 +308,7 @@ func (r *Request) WebhookExtraHeaders(headers map[string]string) *Request {
 	return r.Header(HeaderWebhookExtraHTTPHeaders, string(jsonHeaders))
 }
 
-func (r *Request) File(fieldName, filename string, content io.Reader) *Request {
+func (r *Client) File(fieldName, filename string, content io.Reader) *Client {
 	if r.err != nil {
 		return r
 	}
@@ -352,7 +346,7 @@ func (r *Request) File(fieldName, filename string, content io.Reader) *Request {
 	return r
 }
 
-func (r *Request) FormField(fieldName, value string) *Request {
+func (r *Client) FormField(fieldName, value string) *Client {
 	if r.err != nil {
 		return r
 	}
@@ -373,59 +367,59 @@ func (r *Request) FormField(fieldName, value string) *Request {
 	return r
 }
 
-func (r *Request) IndexHTML(html io.Reader) *Request {
+func (r *Client) IndexHTML(html io.Reader) *Client {
 	return r.File(FieldFiles, FileIndexHTML, html)
 }
 
-func (r *Request) FooterHTML(html io.Reader) *Request {
+func (r *Client) FooterHTML(html io.Reader) *Client {
 	return r.File(FieldFiles, FileFooterHTML, html)
 }
 
-func (r *Request) HeaderHTML(html io.Reader) *Request {
+func (r *Client) HeaderHTML(html io.Reader) *Client {
 	return r.File(FieldFiles, FileHeaderHTML, html)
 }
 
-func (r *Request) StylesCSS(css io.Reader) *Request {
+func (r *Client) StylesCSS(css io.Reader) *Client {
 	return r.File(FieldFiles, FileStylesCSS, css)
 }
 
-func (r *Request) URL(url string) *Request {
+func (r *Client) URL(url string) *Client {
 	return r.FormField(FieldURL, url)
 }
 
-func (r *Request) Bool(fieldName string, value bool) *Request {
+func (r *Client) Bool(fieldName string, value bool) *Client {
 	return r.FormField(fieldName, fmt.Sprintf("%t", value))
 }
 
-func (r *Request) Float(fieldName string, value float64) *Request {
+func (r *Client) Float(fieldName string, value float64) *Client {
 	return r.FormField(fieldName, fmt.Sprintf("%g", value))
 }
 
-func (r *Request) PaperSize(width, height float64) *Request {
+func (r *Client) PaperSize(width, height float64) *Client {
 	return r.Float(FieldPaperWidth, width).
 		Float(FieldPaperHeight, height)
 }
 
-func (r *Request) PaperSizeA4() *Request {
+func (r *Client) PaperSizeA4() *Client {
 	return r.PaperSize(PaperSizeA4[0], PaperSizeA4[1])
 }
 
-func (r *Request) PaperSizeLetter() *Request {
+func (r *Client) PaperSizeLetter() *Client {
 	return r.PaperSize(PaperSizeLetter[0], PaperSizeLetter[1])
 }
 
-func (r *Request) Margins(top, right, bottom, left float64) *Request {
+func (r *Client) Margins(top, right, bottom, left float64) *Client {
 	return r.Float(FieldMarginTop, top).
 		Float(FieldMarginRight, right).
 		Float(FieldMarginBottom, bottom).
 		Float(FieldMarginLeft, left)
 }
 
-func (r *Request) Err() error {
+func (r *Client) Err() error {
 	return r.err
 }
 
-func (r *Request) Send() (*http.Response, error) {
+func (r *Client) Send() (*http.Response, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
