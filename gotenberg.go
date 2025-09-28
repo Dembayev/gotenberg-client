@@ -39,6 +39,8 @@ const (
 	HeaderWebhookMethod           = "Gotenberg-Webhook-Method"
 	HeaderWebhookErrorMethod      = "Gotenberg-Webhook-Error-Method"
 	HeaderWebhookExtraHTTPHeaders = "Gotenberg-Webhook-Extra-Http-Headers"
+	HeaderOutputFilename          = "Gotenberg-Output-Filename"
+	HeaderGotenbergTrace          = "Gotenberg-Trace"
 )
 
 var (
@@ -73,6 +75,11 @@ type Request struct {
 	err error
 }
 
+type Response struct {
+	*http.Response
+	trace string
+}
+
 func NewClient(httpClient *http.Client, baseURL string) (*Client, error) {
 	httpClientWrapper, err := httpclient.NewClient(httpClient, baseURL)
 	if err != nil {
@@ -96,6 +103,11 @@ func (c *Client) ConvertURL(ctx context.Context, url string) *Request {
 
 func (r *Request) WebhookURLMethodPost(url string) *Request {
 	req := r.Request.Header(HeaderWebhookURL, url).Header(HeaderWebhookMethod, http.MethodPost)
+	return &Request{Request: req, err: req.Err()}
+}
+
+func (r *Request) OutputFilename(filename string) *Request {
+	req := r.Request.Header(HeaderOutputFilename, filename)
 	return &Request{Request: req, err: req.Err()}
 }
 
@@ -160,9 +172,13 @@ func (r *Request) FormField(fieldName, value string) *Request {
 	return &Request{Request: req, err: req.Err()}
 }
 
-func (r *Request) Send() (*http.Response, error) {
+func (r *Request) Send() (*Response, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
-	return r.Request.Send()
+	resp, err := r.Request.Send()
+	if err != nil {
+		return nil, err
+	}
+	return &Response{Response: resp, trace: resp.Header.Get(HeaderGotenbergTrace)}, nil
 }

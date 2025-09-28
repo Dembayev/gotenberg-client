@@ -43,6 +43,7 @@ func main() {
 		WebhookURLMethodPost("http://host.docker.internal:28080/success").
 		WebhookErrorURLMethodPost("http://host.docker.internal:28080/error").
 		WebhookExtraHeaders(map[string]string{"X-Custom-Header": "MyValue"}).
+		OutputFilename("invoice_async.pdf").
 		Send()
 
 	if err != nil {
@@ -51,7 +52,7 @@ func main() {
 	defer resp.Body.Close()
 
 	slog.Info("Async HTML to PDF conversion started",
-		"trace", resp.Header.Get("Gotenberg-Trace"))
+		"trace", resp.Header.Get(gotenberg.HeaderGotenbergTrace))
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)

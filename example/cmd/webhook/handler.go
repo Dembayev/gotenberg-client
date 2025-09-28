@@ -5,8 +5,11 @@ import (
 	"io"
 	"log"
 	"log/slog"
+	"mime"
 	"net/http"
 	"os"
+
+	"github.com/nativebpm/gotenberg-client"
 )
 
 func webhookHandler(name string) http.HandlerFunc {
@@ -16,7 +19,9 @@ func webhookHandler(name string) http.HandlerFunc {
 			return
 		}
 
-		outFile, err := os.Create("./invoice_async.pdf")
+		filename := filename(r.Header)
+
+		outFile, err := os.Create(filename)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -31,7 +36,7 @@ func webhookHandler(name string) http.HandlerFunc {
 		slog.Info(fmt.Sprintf("webhook %s received", name),
 			"method", r.Method,
 			"path", r.URL.Path,
-			"gotenberg-trace", r.Header.Get("Gotenberg-Trace"),
+			"gotenberg-trace", r.Header.Get(gotenberg.HeaderGotenbergTrace),
 			"x-custom-header", r.Header.Get("X-Custom-Header"),
 			"body lenth", n,
 		)
@@ -40,4 +45,16 @@ func webhookHandler(name string) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	}
+}
+
+func filename(headers http.Header) string {
+	if v := headers.Get("Content-Disposition"); v != "" {
+		_, params, err := mime.ParseMediaType(v)
+		if err == nil {
+			if fn, ok := params["filename"]; ok {
+				return fn
+			}
+		}
+	}
+	return "file.pdf"
 }
