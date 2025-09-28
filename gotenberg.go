@@ -132,11 +132,6 @@ func WithHeader(key, value string) RequestOptions {
 	}
 }
 
-func WebhookErrorURL(url, method string) RequestOptions {
-	WithHeader(HeaderWebhookErrorURL, url)
-	return WithHeader(HeaderWebhookErrorMethod, method)
-}
-
 func WebhookExtraHTTPHeaders(headers map[string]string) RequestOptions {
 	h, _ := json.Marshal(headers)
 	return WithHeader(HeaderWebhookExtraHTTPHeaders, string(h))
