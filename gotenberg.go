@@ -307,7 +307,7 @@ func (c *Client) Err() error {
 	return c.err
 }
 
-func (c *Client) ResetClient() *Client {
+func (c *Client) reset() *Client {
 	c.buffer.Reset()
 	c.writer = multipart.NewWriter(c.buffer)
 	c.err = nil
@@ -315,7 +315,7 @@ func (c *Client) ResetClient() *Client {
 }
 
 func (c *Client) Execute(ctx context.Context, route string, opts ...RequestOptions) (*http.Response, error) {
-	defer c.ResetClient()
+	defer c.reset()
 
 	if c.err != nil {
 		return nil, c.err
