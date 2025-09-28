@@ -71,7 +71,7 @@ type Client struct {
 }
 
 type Request struct {
-	*httpclient.Request
+	*httpclient.Multipart
 	err error
 }
 
@@ -93,13 +93,13 @@ func NewClient(httpClient *http.Client, baseURL string) (*Client, error) {
 
 func (c *Client) ConvertHTML(ctx context.Context, html io.Reader) *Request {
 	r := &Request{}
-	r.Request, r.err = c.Client.MethodPost(ctx, ConvertHTML).File(FieldFiles, FileIndexHTML, html).GetRequest()
+	r.Multipart, r.err = c.Client.MultipartMethodPost(ctx, ConvertHTML).File(FieldFiles, FileIndexHTML, html).GetRequest()
 	return r
 }
 
 func (c *Client) ConvertURL(ctx context.Context, url string) *Request {
 	r := &Request{}
-	r.Request, r.err = c.Client.MethodPost(ctx, ConvertURL).FormField(FieldURL, url).GetRequest()
+	r.Multipart, r.err = c.Client.MultipartMethodPost(ctx, ConvertURL).FormField(FieldURL, url).GetRequest()
 	return r
 }
 
@@ -107,7 +107,7 @@ func (r *Request) WebhookURLMethodPost(url string) *Request {
 	if r.err != nil {
 		return r
 	}
-	r.Request, r.err = r.Request.Header(HeaderWebhookURL, url).Header(HeaderWebhookMethod, http.MethodPost).GetRequest()
+	r.Multipart, r.err = r.Multipart.Header(HeaderWebhookURL, url).Header(HeaderWebhookMethod, http.MethodPost).GetRequest()
 	return r
 }
 
@@ -115,7 +115,7 @@ func (r *Request) OutputFilename(filename string) *Request {
 	if r.err != nil {
 		return r
 	}
-	r.Request, r.err = r.Request.Header(HeaderOutputFilename, filename).GetRequest()
+	r.Multipart, r.err = r.Multipart.Header(HeaderOutputFilename, filename).GetRequest()
 	return r
 }
 
@@ -123,7 +123,7 @@ func (r *Request) WebhookErrorURLMethodPost(url string) *Request {
 	if r.err != nil {
 		return r
 	}
-	r.Request, r.err = r.Request.Header(HeaderWebhookErrorURL, url).Header(HeaderWebhookErrorMethod, http.MethodPost).GetRequest()
+	r.Multipart, r.err = r.Multipart.Header(HeaderWebhookErrorURL, url).Header(HeaderWebhookErrorMethod, http.MethodPost).GetRequest()
 	return r
 }
 
@@ -133,7 +133,7 @@ func (r *Request) WebhookExtraHeaders(headers map[string]string) *Request {
 		r.err = err
 		return r
 	}
-	r.Request, r.err = r.Request.Header(HeaderWebhookExtraHTTPHeaders, string(jsonHeaders)).GetRequest()
+	r.Multipart, r.err = r.Multipart.Header(HeaderWebhookExtraHTTPHeaders, string(jsonHeaders)).GetRequest()
 	return r
 }
 
@@ -141,7 +141,7 @@ func (r *Request) Bool(fieldName string, value bool) *Request {
 	if r == nil {
 		return r
 	}
-	r.Request, r.err = r.Request.FormField(fieldName, fmt.Sprintf("%t", value)).GetRequest()
+	r.Multipart, r.err = r.Multipart.FormField(fieldName, fmt.Sprintf("%t", value)).GetRequest()
 	return r
 }
 
@@ -149,7 +149,7 @@ func (r *Request) Float(fieldName string, value float64) *Request {
 	if r == nil {
 		return r
 	}
-	r.Request, r.err = r.Request.FormField(fieldName, fmt.Sprintf("%g", value)).GetRequest()
+	r.Multipart, r.err = r.Multipart.FormField(fieldName, fmt.Sprintf("%g", value)).GetRequest()
 	return r
 }
 
@@ -185,7 +185,7 @@ func (r *Request) File(fieldName, filename string, content io.Reader) *Request {
 	if r == nil {
 		return r
 	}
-	r.Request, r.err = r.Request.File(fieldName, filename, content).GetRequest()
+	r.Multipart, r.err = r.Multipart.File(fieldName, filename, content).GetRequest()
 	return r
 }
 
@@ -193,7 +193,7 @@ func (r *Request) Header(key, value string) *Request {
 	if r == nil {
 		return r
 	}
-	r.Request, r.err = r.Request.Header(key, value).GetRequest()
+	r.Multipart, r.err = r.Multipart.Header(key, value).GetRequest()
 	return r
 }
 
@@ -201,7 +201,7 @@ func (r *Request) FormField(fieldName, value string) *Request {
 	if r == nil {
 		return r
 	}
-	r.Request, r.err = r.Request.FormField(fieldName, value).GetRequest()
+	r.Multipart, r.err = r.Multipart.FormField(fieldName, value).GetRequest()
 	return r
 }
 
@@ -209,7 +209,7 @@ func (r *Request) Send() (*Response, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
-	resp, err := r.Request.Send()
+	resp, err := r.Multipart.Send()
 	if err != nil {
 		return nil, err
 	}
