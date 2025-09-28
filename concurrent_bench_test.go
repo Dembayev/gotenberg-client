@@ -29,7 +29,7 @@ func BenchmarkConcurrentSafetyBasic(b *testing.B) {
 				b.Error(err)
 			}
 			if resp != nil {
-				resp.Body.Close()
+				_ = resp.Body.Close()
 			}
 		}
 	})
@@ -40,7 +40,7 @@ func BenchmarkConcurrentHTMLConversion(b *testing.B) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/pdf")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("mock pdf content"))
+		_, _ = w.Write([]byte("mock pdf content"))
 	}))
 	defer server.Close()
 
@@ -56,7 +56,7 @@ func BenchmarkConcurrentHTMLConversion(b *testing.B) {
 				b.Error(err)
 			}
 			if resp != nil {
-				resp.Body.Close()
+				_ = resp.Body.Close()
 			}
 		}
 	})
@@ -67,7 +67,7 @@ func BenchmarkConcurrentURLConversion(b *testing.B) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/pdf")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("mock pdf content"))
+		_, _ = w.Write([]byte("mock pdf content"))
 	}))
 	defer server.Close()
 
@@ -82,7 +82,7 @@ func BenchmarkConcurrentURLConversion(b *testing.B) {
 				b.Error(err)
 			}
 			if resp != nil {
-				resp.Body.Close()
+				_ = resp.Body.Close()
 			}
 		}
 	})
@@ -113,7 +113,7 @@ func BenchmarkConcurrentRequestIsolation(b *testing.B) {
 				b.Error(err)
 			}
 			if resp != nil {
-				resp.Body.Close()
+				_ = resp.Body.Close()
 			}
 			requestID++
 		}
@@ -153,7 +153,7 @@ func BenchmarkConcurrentStressTest(b *testing.B) {
 					b.Error(err)
 				}
 				if resp != nil {
-					resp.Body.Close()
+					_ = resp.Body.Close()
 				}
 			}(j)
 		}

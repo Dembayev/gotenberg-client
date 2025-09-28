@@ -16,7 +16,7 @@ func TestClient_ConcurrentSafety(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(10 * time.Millisecond) // Simulate some processing time
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	}))
 	defer server.Close()
 
@@ -51,7 +51,7 @@ func TestClient_ConcurrentSafety(t *testing.T) {
 					continue
 				}
 
-				resp.Body.Close()
+				_ = resp.Body.Close()
 			}
 		}(i)
 	}
@@ -77,7 +77,7 @@ func TestClient_ConcurrentHTMLConversion(t *testing.T) {
 		time.Sleep(5 * time.Millisecond)
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("PDF content"))
+		_, _ = w.Write([]byte("PDF content"))
 	}))
 	defer server.Close()
 
@@ -110,7 +110,7 @@ func TestClient_ConcurrentHTMLConversion(t *testing.T) {
 				return
 			}
 
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		}(i)
 	}
 
@@ -128,7 +128,7 @@ func TestClient_ConcurrentURLConversion(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(5 * time.Millisecond)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("PDF content"))
+		_, _ = w.Write([]byte("PDF content"))
 	}))
 	defer server.Close()
 
@@ -158,7 +158,7 @@ func TestClient_ConcurrentURLConversion(t *testing.T) {
 				return
 			}
 
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		}()
 	}
 
@@ -182,7 +182,7 @@ func TestClient_ConcurrentWithWebhooks(t *testing.T) {
 
 		time.Sleep(5 * time.Millisecond)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("PDF content"))
+		_, _ = w.Write([]byte("PDF content"))
 	}))
 	defer server.Close()
 
@@ -217,7 +217,7 @@ func TestClient_ConcurrentWithWebhooks(t *testing.T) {
 				return
 			}
 
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		}(i)
 	}
 
