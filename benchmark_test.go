@@ -321,7 +321,14 @@ func BenchmarkMultipleFiles(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		client := NewClient(httpClient, "http://localhost:3000")
 
-		html := strings.NewReader("<html><head><link rel='stylesheet' href='main.css'><link rel='stylesheet' href='theme.css'></head><body><img src='logo.png'><img src='banner.jpg'></body></html>")
+		html := strings.NewReader(`<html>
+		<head>
+		<link rel='stylesheet' href='main.css'><link rel='stylesheet' href='theme.css'>
+		</head>
+		<body>
+		<img src='logo.png'><img src='banner.jpg'>
+		</body>
+		</html>`)
 		mainCSS := strings.NewReader("body { font-family: Arial; }")
 		themeCSS := strings.NewReader("h1 { color: blue; }")
 		logo := strings.NewReader("fake-png-data")
