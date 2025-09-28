@@ -24,18 +24,19 @@ const (
 )
 
 type Request struct {
+	c         *Client
 	request   *http.Request
 	multipart bool
 	writer    *multipart.Writer
 	buffer    *bytes.Buffer
-	bufPool   sync.Pool
+	bufPool   *sync.Pool
+	err       error
 }
 
 type Client struct {
 	baseURL *url.URL
 	client  *http.Client
-	err     error
-	Request
+	bufPool sync.Pool
 }
 
 func NewClient(client *http.Client, baseURL string) (*Client, error) {
@@ -44,58 +45,67 @@ func NewClient(client *http.Client, baseURL string) (*Client, error) {
 		return nil, fmt.Errorf("invalid base URL: %v", err)
 	}
 
-	return &Client{
+	c := &Client{
 		client:  client,
 		baseURL: u,
-	}, nil
-}
-
-func (r *Client) MethodGet(ctx context.Context, path string) *Client {
-	if r.err != nil {
-		return r
 	}
 
-	r.request, r.err = http.NewRequestWithContext(ctx, http.MethodGet, r.baseURL.JoinPath(path).String(), nil)
-	return r
-}
-
-func (r *Client) MethodPost(ctx context.Context, path string) *Client {
-	if r.err != nil {
-		return r
+	c.bufPool = sync.Pool{
+		New: func() any {
+			buf := make([]byte, 0, bufferSize)
+			return &buf
+		},
 	}
 
-	r.request, r.err = http.NewRequestWithContext(ctx, http.MethodPost, r.baseURL.JoinPath(path).String(), nil)
-	return r
+	return c, nil
 }
 
-func (r *Client) MethodPut(ctx context.Context, path string) *Client {
-	if r.err != nil {
-		return r
+func (c *Client) MethodGet(ctx context.Context, path string) *Request {
+	req := &Request{
+		c:       c,
+		bufPool: &c.bufPool,
 	}
-
-	r.request, r.err = http.NewRequestWithContext(ctx, http.MethodPut, r.baseURL.JoinPath(path).String(), nil)
-	return r
+	req.request, req.err = http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL.JoinPath(path).String(), nil)
+	return req
 }
 
-func (r *Client) MethodPatch(ctx context.Context, path string) *Client {
-	if r.err != nil {
-		return r
+func (c *Client) MethodPost(ctx context.Context, path string) *Request {
+	req := &Request{
+		c:       c,
+		bufPool: &c.bufPool,
 	}
-
-	r.request, r.err = http.NewRequestWithContext(ctx, http.MethodPatch, r.baseURL.JoinPath(path).String(), nil)
-	return r
+	req.request, req.err = http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL.JoinPath(path).String(), nil)
+	return req
 }
 
-func (r *Client) MethodDelete(ctx context.Context, path string) *Client {
-	if r.err != nil {
-		return r
+func (c *Client) MethodPut(ctx context.Context, path string) *Request {
+	req := &Request{
+		c:       c,
+		bufPool: &c.bufPool,
 	}
-
-	r.request, r.err = http.NewRequestWithContext(ctx, http.MethodDelete, r.baseURL.JoinPath(path).String(), nil)
-	return r
+	req.request, req.err = http.NewRequestWithContext(ctx, http.MethodPut, c.baseURL.JoinPath(path).String(), nil)
+	return req
 }
 
-func (r *Client) Multipart() *Client {
+func (c *Client) MethodPatch(ctx context.Context, path string) *Request {
+	req := &Request{
+		c:       c,
+		bufPool: &c.bufPool,
+	}
+	req.request, req.err = http.NewRequestWithContext(ctx, http.MethodPatch, c.baseURL.JoinPath(path).String(), nil)
+	return req
+}
+
+func (c *Client) MethodDelete(ctx context.Context, path string) *Request {
+	req := &Request{
+		c:       c,
+		bufPool: &c.bufPool,
+	}
+	req.request, req.err = http.NewRequestWithContext(ctx, http.MethodDelete, c.baseURL.JoinPath(path).String(), nil)
+	return req
+}
+
+func (r *Request) Multipart() *Request {
 	if r.err != nil {
 		return r
 	}
@@ -104,12 +114,6 @@ func (r *Client) Multipart() *Client {
 		return r
 	}
 
-	r.bufPool = sync.Pool{
-		New: func() any {
-			buf := make([]byte, 0, bufferSize)
-			return &buf
-		},
-	}
 	r.buffer = &bytes.Buffer{}
 	r.buffer.Grow(bufferSize)
 	r.writer = multipart.NewWriter(r.buffer)
@@ -118,7 +122,7 @@ func (r *Client) Multipart() *Client {
 	return r
 }
 
-func (r *Client) Header(key, value string) *Client {
+func (r *Request) Header(key, value string) *Request {
 	if r.err != nil {
 		return r
 	}
@@ -131,7 +135,7 @@ func (r *Client) Header(key, value string) *Client {
 	return r
 }
 
-func (r *Client) Headers(headers map[string]string) *Client {
+func (r *Request) Headers(headers map[string]string) *Request {
 	if r.err != nil {
 		return r
 	}
@@ -143,15 +147,15 @@ func (r *Client) Headers(headers map[string]string) *Client {
 	return r
 }
 
-func (r *Client) ContentType(contentType string) *Client {
+func (r *Request) ContentType(contentType string) *Request {
 	return r.Header(ContentType, contentType)
 }
 
-func (r *Client) JSONContentType() *Client {
+func (r *Request) JSONContentType() *Request {
 	return r.ContentType(ApplicationJSON)
 }
 
-func (r *Client) QueryParam(key, value string) *Client {
+func (r *Request) QueryParam(key, value string) *Request {
 	if r.err != nil {
 		return r
 	}
@@ -163,7 +167,7 @@ func (r *Client) QueryParam(key, value string) *Client {
 	return r
 }
 
-func (r *Client) QueryParams(params map[string]string) *Client {
+func (r *Request) QueryParams(params map[string]string) *Request {
 	if r.err != nil {
 		return r
 	}
@@ -177,7 +181,7 @@ func (r *Client) QueryParams(params map[string]string) *Client {
 	return r
 }
 
-func (r *Client) QueryValues(values url.Values) *Client {
+func (r *Request) QueryValues(values url.Values) *Request {
 	if r.err != nil {
 		return r
 	}
@@ -196,7 +200,7 @@ func (r *Client) QueryValues(values url.Values) *Client {
 	return r
 }
 
-func (r *Client) Body(body io.ReadCloser) *Client {
+func (r *Request) Body(body io.ReadCloser) *Request {
 	if r.err != nil {
 		return r
 	}
@@ -205,7 +209,7 @@ func (r *Client) Body(body io.ReadCloser) *Client {
 	return r
 }
 
-func (r *Client) BytesBody(body []byte) *Client {
+func (r *Request) BytesBody(body []byte) *Request {
 	if r.err != nil {
 		return r
 	}
@@ -216,11 +220,11 @@ func (r *Client) BytesBody(body []byte) *Client {
 	return r
 }
 
-func (r *Client) StringBody(body string) *Client {
+func (r *Request) StringBody(body string) *Request {
 	return r.BytesBody([]byte(body))
 }
 
-func (r *Client) JSONBody(body any) *Client {
+func (r *Request) JSONBody(body any) *Request {
 	if r.err != nil {
 		return r
 	}
@@ -237,7 +241,7 @@ func (r *Client) JSONBody(body any) *Client {
 	return r
 }
 
-func (r *Client) File(fieldName, filename string, content io.Reader) *Client {
+func (r *Request) File(fieldName, filename string, content io.Reader) *Request {
 	if r.err != nil {
 		return r
 	}
@@ -275,7 +279,7 @@ func (r *Client) File(fieldName, filename string, content io.Reader) *Client {
 	return r
 }
 
-func (r *Client) FormField(fieldName, value string) *Client {
+func (r *Request) FormField(fieldName, value string) *Request {
 	if r.err != nil {
 		return r
 	}
@@ -296,24 +300,11 @@ func (r *Client) FormField(fieldName, value string) *Client {
 	return r
 }
 
-func (r *Client) Err() error {
+func (r *Request) Err() error {
 	return r.err
 }
 
-func (r *Client) Reset() *Client {
-	r.request = nil
-	r.err = nil
-	r.multipart = false
-	r.writer = nil
-	if r.buffer != nil {
-		r.buffer.Reset()
-	}
-	return r
-}
-
-func (r *Client) Send() (*http.Response, error) {
-	defer r.Reset()
-
+func (r *Request) Send() (*http.Response, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
@@ -328,5 +319,5 @@ func (r *Client) Send() (*http.Response, error) {
 		r = r.Header(ContentLength, strconv.Itoa(r.buffer.Len()))
 	}
 
-	return r.client.Do(r.request)
+	return r.c.client.Do(r.request)
 }

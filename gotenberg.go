@@ -62,23 +62,23 @@ const (
 	FileStylesCSS  = "styles.css"
 )
 
-func (r *Client) ConvertHTML(ctx context.Context, html io.Reader) *Client {
-	return r.MethodPost(ctx, ConvertHTML).File(FieldFiles, FileIndexHTML, html)
+func (c *Client) ConvertHTML(ctx context.Context, html io.Reader) *Request {
+	return c.MethodPost(ctx, ConvertHTML).File(FieldFiles, FileIndexHTML, html)
 }
 
-func (r *Client) ConvertURL(ctx context.Context, url string) *Client {
-	return r.MethodPost(ctx, ConvertURL).FormField(FieldURL, url)
+func (c *Client) ConvertURL(ctx context.Context, url string) *Request {
+	return c.MethodPost(ctx, ConvertURL).FormField(FieldURL, url)
 }
 
-func (r *Client) WebhookURLMethodPost(url string) *Client {
+func (r *Request) WebhookURLMethodPost(url string) *Request {
 	return r.Header(HeaderWebhookURL, url).Header(HeaderWebhookMethod, http.MethodPost)
 }
 
-func (r *Client) WebhookErrorURLMethodPost(url string) *Client {
+func (r *Request) WebhookErrorURLMethodPost(url string) *Request {
 	return r.Header(HeaderWebhookErrorURL, url).Header(HeaderWebhookErrorMethod, http.MethodPost)
 }
 
-func (r *Client) WebhookExtraHeaders(headers map[string]string) *Client {
+func (r *Request) WebhookExtraHeaders(headers map[string]string) *Request {
 	if r.err != nil {
 		return r
 	}
@@ -92,28 +92,28 @@ func (r *Client) WebhookExtraHeaders(headers map[string]string) *Client {
 	return r.Header(HeaderWebhookExtraHTTPHeaders, string(jsonHeaders))
 }
 
-func (r *Client) Bool(fieldName string, value bool) *Client {
+func (r *Request) Bool(fieldName string, value bool) *Request {
 	return r.FormField(fieldName, fmt.Sprintf("%t", value))
 }
 
-func (r *Client) Float(fieldName string, value float64) *Client {
+func (r *Request) Float(fieldName string, value float64) *Request {
 	return r.FormField(fieldName, fmt.Sprintf("%g", value))
 }
 
-func (r *Client) PaperSize(width, height float64) *Client {
+func (r *Request) PaperSize(width, height float64) *Request {
 	return r.Float(FieldPaperWidth, width).
 		Float(FieldPaperHeight, height)
 }
 
-func (r *Client) PaperSizeA4() *Client {
+func (r *Request) PaperSizeA4() *Request {
 	return r.PaperSize(PaperSizeA4[0], PaperSizeA4[1])
 }
 
-func (r *Client) PaperSizeLetter() *Client {
+func (r *Request) PaperSizeLetter() *Request {
 	return r.PaperSize(PaperSizeLetter[0], PaperSizeLetter[1])
 }
 
-func (r *Client) Margins(top, right, bottom, left float64) *Client {
+func (r *Request) Margins(top, right, bottom, left float64) *Request {
 	return r.Float(FieldMarginTop, top).
 		Float(FieldMarginRight, right).
 		Float(FieldMarginBottom, bottom).
