@@ -1,4 +1,4 @@
-package gotenberg
+package httpclient
 
 import (
 	"bytes"
@@ -20,7 +20,7 @@ const (
 )
 
 const (
-	bufferSize = 1 << 12 // 4096 bytes (4 KB)
+	bufferSize = 1 << 12
 )
 
 var bufferPool = sync.Pool{

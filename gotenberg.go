@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"github.com/nativebpm/gotenberg-client/pkg/httpclient"
 )
 
 const (
@@ -62,42 +64,65 @@ const (
 	FileStylesCSS  = "styles.css"
 )
 
+type Client struct {
+	*httpclient.Client
+}
+
+type Request struct {
+	*httpclient.Request
+	err error
+}
+
+func NewClient(httpClient *http.Client, baseURL string) (*Client, error) {
+	httpClientWrapper, err := httpclient.NewClient(httpClient, baseURL)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Client{
+		Client: httpClientWrapper,
+	}, nil
+}
+
 func (c *Client) ConvertHTML(ctx context.Context, html io.Reader) *Request {
-	return c.MethodPost(ctx, ConvertHTML).File(FieldFiles, FileIndexHTML, html)
+	req := c.Client.MethodPost(ctx, ConvertHTML).File(FieldFiles, FileIndexHTML, html)
+	return &Request{Request: req, err: req.Err()}
 }
 
 func (c *Client) ConvertURL(ctx context.Context, url string) *Request {
-	return c.MethodPost(ctx, ConvertURL).FormField(FieldURL, url)
+	req := c.Client.MethodPost(ctx, ConvertURL).FormField(FieldURL, url)
+	return &Request{Request: req, err: req.Err()}
 }
 
 func (r *Request) WebhookURLMethodPost(url string) *Request {
-	return r.Header(HeaderWebhookURL, url).Header(HeaderWebhookMethod, http.MethodPost)
+	req := r.Request.Header(HeaderWebhookURL, url).Header(HeaderWebhookMethod, http.MethodPost)
+	return &Request{Request: req, err: req.Err()}
 }
 
 func (r *Request) WebhookErrorURLMethodPost(url string) *Request {
-	return r.Header(HeaderWebhookErrorURL, url).Header(HeaderWebhookErrorMethod, http.MethodPost)
+	req := r.Request.Header(HeaderWebhookErrorURL, url).Header(HeaderWebhookErrorMethod, http.MethodPost)
+	return &Request{Request: req, err: req.Err()}
 }
 
 func (r *Request) WebhookExtraHeaders(headers map[string]string) *Request {
-	if r.err != nil {
-		return r
-	}
-
 	jsonHeaders, err := json.Marshal(headers)
 	if err != nil {
-		r.err = fmt.Errorf("failed to marshal webhook headers: %w", err)
+		r.err = err
 		return r
 	}
 
-	return r.Header(HeaderWebhookExtraHTTPHeaders, string(jsonHeaders))
+	req := r.Request.Header(HeaderWebhookExtraHTTPHeaders, string(jsonHeaders))
+	return &Request{Request: req, err: req.Err()}
 }
 
 func (r *Request) Bool(fieldName string, value bool) *Request {
-	return r.FormField(fieldName, fmt.Sprintf("%t", value))
+	req := r.Request.FormField(fieldName, fmt.Sprintf("%t", value))
+	return &Request{Request: req, err: req.Err()}
 }
 
 func (r *Request) Float(fieldName string, value float64) *Request {
-	return r.FormField(fieldName, fmt.Sprintf("%g", value))
+	req := r.Request.FormField(fieldName, fmt.Sprintf("%g", value))
+	return &Request{Request: req, err: req.Err()}
 }
 
 func (r *Request) PaperSize(width, height float64) *Request {
@@ -118,4 +143,26 @@ func (r *Request) Margins(top, right, bottom, left float64) *Request {
 		Float(FieldMarginRight, right).
 		Float(FieldMarginBottom, bottom).
 		Float(FieldMarginLeft, left)
+}
+
+func (r *Request) File(fieldName, filename string, content io.Reader) *Request {
+	req := r.Request.File(fieldName, filename, content)
+	return &Request{Request: req, err: req.Err()}
+}
+
+func (r *Request) Header(key, value string) *Request {
+	req := r.Request.Header(key, value)
+	return &Request{Request: req, err: req.Err()}
+}
+
+func (r *Request) FormField(fieldName, value string) *Request {
+	req := r.Request.FormField(fieldName, value)
+	return &Request{Request: req, err: req.Err()}
+}
+
+func (r *Request) Send() (*http.Response, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	return r.Request.Send()
 }
