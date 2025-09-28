@@ -27,11 +27,11 @@ Based on comprehensive benchmarks:
 ## 📊 Benchmark Results
 
 ```
-BenchmarkClient_Reset-12                    1000000000    1.223 ns/op     0 B/op    0 allocs/op
-BenchmarkNewClient-12                        5547428       217.5 ns/op     256 B/op  2 allocs/op
-BenchmarkClient_Send_GET-12                  3638         300905 ns/op    6358 B/op  79 allocs/op
-BenchmarkHTMLConversion_EndToEnd-12          2292         530779 ns/op   23504 B/op 248 allocs/op
-BenchmarkRealWorldHTMLUsage-12               2070         501488 ns/op   27102 B/op 294 allocs/op
+BenchmarkClient_Reset-12                    1000000000    1.15 ns/op      0 B/op    0 allocs/op
+BenchmarkNewClient-12                        5680000       211 ns/op       256 B/op  2 allocs/op
+BenchmarkClient_Send_GET-12                  3540          303 μs/op       6320 B/op 79 allocs/op
+BenchmarkHTMLConversion_EndToEnd-12          2720          394 μs/op       23498 B/op 248 allocs/op
+BenchmarkRealWorldHTMLUsage-12               2167          469 μs/op       26987 B/op 294 allocs/op
 ```
 
 ## 🔧 Quick Start
