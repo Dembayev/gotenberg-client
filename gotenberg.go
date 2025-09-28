@@ -132,7 +132,7 @@ func WithHeader(key, value string) RequestOptions {
 	}
 }
 
-func WebhookExtraHTTPHeaders(headers map[string]string) RequestOptions {
+func WebhookExtraHTTPHeaders(headers []http.Header) RequestOptions {
 	h, _ := json.Marshal(headers)
 	return WithHeader(HeaderWebhookExtraHTTPHeaders, string(h))
 }
@@ -362,7 +362,7 @@ func (c *Client) ConvertHTML(ctx context.Context) (*http.Response, error) {
 func (c *Client) AsyncConvertHTML(ctx context.Context,
 	webhookURL, webhookMethod,
 	webhookErrorURL, webhookErrorMethod string,
-	webHookHeaders map[string]string) (*http.Response, error) {
+	webHookHeaders []http.Header) (*http.Response, error) {
 	return c.Execute(ctx, ConvertHTML,
 		WithHeader(HeaderWebhookURL, webhookURL),
 		WithHeader(HeaderWebhookMethod, webhookMethod),

@@ -40,7 +40,7 @@ func main() {
 		AsyncConvertHTML(context.Background(),
 			"http://host.docker.internal:28080/success", "POST",
 			"http://host.docker.internal:28080/error", "POST",
-			map[string]string{"X-Custom-Header": "MyValue"})
+			[]http.Header{{"X-Custom-Header": []string{"MyValue"}}})
 
 	if err != nil {
 		log.Fatal(err)
