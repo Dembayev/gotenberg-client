@@ -26,21 +26,21 @@ func main() {
 		Timeout: 90 * time.Second,
 	}
 
-	client := gotenberg.NewClient(httpClient, gotenbergURL)
-
 	data := model.InvoiceData
 	html := bytes.NewBuffer(nil)
 	invoice.Template.Execute(html, data)
 
 	logo := image.LogoPNG()
 
-	resp, err := client.IndexHTML(html).
-		File("logo.png", bytes.NewReader(logo)).
+	ctx := context.Background()
+	resp, err := gotenberg.NewMultipartRequest(ctx, "POST", gotenbergURL+"/forms/chromium/convert/html").
+		IndexHTML(html).
+		File(gotenberg.FieldFiles, "logo.png", bytes.NewReader(logo)).
 		Bool(gotenberg.FieldPrintBackground, true).
-		AsyncConvertHTML(context.Background(),
-			"http://host.docker.internal:28080/success", "POST",
-			"http://host.docker.internal:28080/error", "POST",
-			map[string]string{"X-Custom-Header": "MyValue"})
+		WebhookURLMethodPost("http://host.docker.internal:28080/success").
+		WebhookErrorURLMethodPost("http://host.docker.internal:28080/error").
+		WebhookExtraHeaders(map[string]string{"X-Custom-Header": "MyValue"}).
+		Execute(httpClient)
 
 	if err != nil {
 		log.Fatal(err)
