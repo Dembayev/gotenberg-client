@@ -300,7 +300,20 @@ func (r *Client) Err() error {
 	return r.err
 }
 
+func (r *Client) Reset() *Client {
+	r.request = nil
+	r.err = nil
+	r.multipart = false
+	r.writer = nil
+	if r.buffer != nil {
+		r.buffer.Reset()
+	}
+	return r
+}
+
 func (r *Client) Send() (*http.Response, error) {
+	defer r.Reset()
+
 	if r.err != nil {
 		return nil, r.err
 	}
