@@ -364,7 +364,10 @@ func (c *Client) ConvertHTML(ctx context.Context) (*http.Response, error) {
 	return c.Execute(ctx, ConvertHTML)
 }
 
-func (c *Client) AsyncConvertHTML(ctx context.Context, webhookURL, webhookMethod, webhookErrorURL, webhookErrorMethod string, webHookHeaders map[string]string) (*http.Response, error) {
+func (c *Client) AsyncConvertHTML(ctx context.Context,
+	webhookURL, webhookMethod,
+	webhookErrorURL, webhookErrorMethod string,
+	webHookHeaders map[string]string) (*http.Response, error) {
 	return c.Execute(ctx, ConvertHTML,
 		WithHeader(HeaderWebhookURL, webhookURL),
 		WithHeader(HeaderWebhookMethod, webhookMethod),
