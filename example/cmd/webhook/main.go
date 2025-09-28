@@ -37,10 +37,10 @@ func main() {
 	resp, err := client.IndexHTML(html).
 		File("logo.png", bytes.NewReader(logo)).
 		Bool(gotenberg.FieldPrintBackground, true).
-		WebhookURL("http://host.docker.internal:28080/success", "POST").
-		WebhookErrorURL("http://host.docker.internal:28080/error", "POST").
-		WebhookExtraHTTPHeaders(map[string]string{"X-Custom-Header": "MyValue"}).
-		ConvertHTML(context.Background())
+		AsyncConvertHTML(context.Background(),
+			"http://host.docker.internal:28080/success", "POST",
+			"http://host.docker.internal:28080/error", "POST",
+			map[string]string{"X-Custom-Header": "MyValue"})
 
 	if err != nil {
 		log.Fatal(err)

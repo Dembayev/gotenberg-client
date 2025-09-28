@@ -9,6 +9,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -29,6 +30,12 @@ const (
 	FieldLandscape               = "landscape"
 	FieldScale                   = "scale"
 	FieldNativePageRanges        = "nativePageRanges"
+)
+
+const (
+	ApplicationJSON = "application/json"
+	ContentType     = "Content-Type"
+	ContentLength   = "Content-Length"
 )
 
 const (
@@ -87,8 +94,80 @@ type Client struct {
 	buffer     *bytes.Buffer
 	writer     *multipart.Writer
 	bufPool    sync.Pool
-	headers    map[string]string
 	err        error
+}
+
+type RequestOptions func(r *http.Request) error
+
+func WithHost() RequestOptions {
+	return func(r *http.Request) error {
+		return WithHeader("Host", r.URL.Host)(r)
+	}
+}
+
+func WithQueryParams(values url.Values) RequestOptions {
+	return func(r *http.Request) error {
+		q := r.URL.Query()
+		for k := range values {
+			v := values.Get(k)
+			if v == "" {
+				q.Del(k)
+				continue
+			}
+			q.Add(k, values.Get(k))
+		}
+		r.URL.RawQuery = q.Encode()
+		return nil
+	}
+}
+
+func WithHeader(key, value string) RequestOptions {
+	return func(r *http.Request) error {
+		if r.Header == nil {
+			r.Header = make(http.Header)
+		}
+		r.Header.Set(key, value)
+
+		return nil
+	}
+}
+
+func WebhookErrorURL(url, method string) RequestOptions {
+	WithHeader(HeaderWebhookErrorURL, url)
+	return WithHeader(HeaderWebhookErrorMethod, method)
+}
+
+func WebhookExtraHTTPHeaders(headers map[string]string) RequestOptions {
+	h, _ := json.Marshal(headers)
+	return WithHeader(HeaderWebhookExtraHTTPHeaders, string(h))
+}
+
+func WithJSONBody(body interface{}) RequestOptions {
+	return func(r *http.Request) error {
+		b, err := json.Marshal(body)
+		if err != nil {
+			return err
+		}
+		err = WithBytesBody(b)(r)
+		if err != nil {
+			return err
+		}
+		return WithHeader(ContentType, ApplicationJSON)(r)
+	}
+}
+
+func WithBytesBody(body []byte) RequestOptions {
+	return func(r *http.Request) error {
+		r.Body = io.NopCloser(bytes.NewReader(body))
+		return WithHeader(ContentLength, strconv.Itoa(len(body)))(r)
+	}
+}
+
+func WithReaderBody(body io.ReadCloser) RequestOptions {
+	return func(r *http.Request) error {
+		r.Body = body
+		return nil
+	}
 }
 
 func NewClient(httpClient *http.Client, baseURL string) *Client {
@@ -107,7 +186,6 @@ func NewClient(httpClient *http.Client, baseURL string) *Client {
 		baseURL:    u,
 		buffer:     buf,
 		writer:     multipart.NewWriter(buf),
-		headers:    make(map[string]string),
 	}
 
 	c.bufPool = sync.Pool{
@@ -229,47 +307,15 @@ func (c *Client) Err() error {
 	return c.err
 }
 
-func (c *Client) Header(name, value string) *Client {
-	if c.err != nil {
-		return c
-	}
-	c.headers[name] = value
-	return c
-}
-
-func (c *Client) WebhookURL(url, method string) *Client {
-	return c.Header(HeaderWebhookURL, url).Header(HeaderWebhookMethod, method)
-}
-
-func (c *Client) WebhookErrorURL(url, method string) *Client {
-	return c.Header(HeaderWebhookErrorURL, url).Header(HeaderWebhookErrorMethod, method)
-}
-
-func (c *Client) WebhookExtraHTTPHeaders(headers map[string]string) *Client {
-	h, err := json.Marshal(headers)
-	if err != nil {
-		c.err = fmt.Errorf("failed to marshal webhook extra HTTP headers: %w", err)
-		return c
-	}
-	return c.Header(HeaderWebhookExtraHTTPHeaders, string(h))
-}
-
 func (c *Client) ResetClient() *Client {
 	c.buffer.Reset()
 	c.writer = multipart.NewWriter(c.buffer)
-	c.headers = make(map[string]string)
 	c.err = nil
 	return c
 }
 
-func (c *Client) Execute(ctx context.Context, route string) (*http.Response, error) {
+func (c *Client) Execute(ctx context.Context, route string, opts ...RequestOptions) (*http.Response, error) {
 	defer c.ResetClient()
-
-	uri, ok := routesURI[route]
-
-	if !ok {
-		return nil, fmt.Errorf("unknown route: %s", route)
-	}
 
 	if c.err != nil {
 		return nil, c.err
@@ -283,21 +329,32 @@ func (c *Client) Execute(ctx context.Context, route string) (*http.Response, err
 		return nil, fmt.Errorf("failed to close writer: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"POST",
-		c.baseURL.JoinPath(uri).String(),
-		c.buffer,
-	)
+	uri, ok := routesURI[route]
+
+	if !ok {
+		return nil, fmt.Errorf("unknown route: %s", route)
+	}
+
+	opts = append(opts,
+		WithReaderBody(io.NopCloser(c.buffer)),
+		WithHeader(ContentType, c.writer.FormDataContentType()),
+		WithHeader(ContentLength, strconv.Itoa(c.buffer.Len())))
+
+	return c.sendRequest(ctx, "POST", c.baseURL.JoinPath(uri).String(), opts...)
+}
+
+func (c *Client) sendRequest(ctx context.Context, method, url string, opts ...RequestOptions) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, method, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set("Content-Type", c.writer.FormDataContentType())
-	req.ContentLength = int64(c.buffer.Len())
-
-	for name, value := range c.headers {
-		req.Header.Set(name, value)
+	if len(opts) > 0 {
+		for _, v := range opts {
+			if err = v(req); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	return c.httpClient.Do(req)
@@ -305,6 +362,16 @@ func (c *Client) Execute(ctx context.Context, route string) (*http.Response, err
 
 func (c *Client) ConvertHTML(ctx context.Context) (*http.Response, error) {
 	return c.Execute(ctx, ConvertHTML)
+}
+
+func (c *Client) AsyncConvertHTML(ctx context.Context, webhookURL, webhookMethod, webhookErrorURL, webhookErrorMethod string, webHookHeaders map[string]string) (*http.Response, error) {
+	return c.Execute(ctx, ConvertHTML,
+		WithHeader(HeaderWebhookURL, webhookURL),
+		WithHeader(HeaderWebhookMethod, webhookMethod),
+		WithHeader(HeaderWebhookErrorURL, webhookErrorURL),
+		WithHeader(HeaderWebhookErrorMethod, webhookErrorMethod),
+		WebhookExtraHTTPHeaders(webHookHeaders),
+	)
 }
 
 func (c *Client) ConvertURL(ctx context.Context) (*http.Response, error) {
