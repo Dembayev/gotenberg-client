@@ -23,7 +23,8 @@ const (
 	ContentLength   = "Content-Length"
 )
 
-type Form struct {
+type Request struct {
+	request   *http.Request
 	multipart bool
 	writer    *multipart.Writer
 	buffer    *bytes.Buffer
@@ -33,9 +34,8 @@ type Form struct {
 type Client struct {
 	baseURL *url.URL
 	client  *http.Client
-	request *http.Request
 	err     error
-	Form
+	Request
 }
 
 func NewClient(client *http.Client, baseURL string) (*Client, error) {
