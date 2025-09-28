@@ -196,6 +196,10 @@ func (r *Request) Body(body io.ReadCloser) *Request {
 		return r
 	}
 
+	if r.request.Body != nil {
+		_ = r.request.Body.Close()
+	}
+
 	r.request.Body = body
 	return r
 }
@@ -252,13 +256,19 @@ func (r *Request) File(fieldName, filename string, content io.Reader) *Request {
 
 	var buf []byte
 	if p := bufferPool.Get(); p != nil {
-		buf = (*p.(*[]byte))[:bufferSize]
+		if bufPtr, ok := p.(*[]byte); ok {
+			buf = (*bufPtr)[:cap(*bufPtr)]
+		} else {
+			buf = make([]byte, bufferSize)
+		}
 	} else {
 		buf = make([]byte, bufferSize)
 	}
 	defer func() {
-		buf = buf[:0]
-		bufferPool.Put(&buf)
+		if len(buf) > 0 {
+			buf = buf[:0]
+			bufferPool.Put(&buf)
+		}
 	}()
 
 	_, err = io.CopyBuffer(part, content, buf)
