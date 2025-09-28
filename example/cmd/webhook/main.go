@@ -32,15 +32,18 @@ func main() {
 
 	logo := image.LogoPNG()
 
-	ctx := context.Background()
-	resp, err := gotenberg.NewMultipartRequest(ctx, "POST", gotenbergURL+"/forms/chromium/convert/html").
-		IndexHTML(html).
+	client, err := gotenberg.NewClient(httpClient, gotenbergURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	resp, err := client.ConvertHTML(context.Background(), html).
 		File(gotenberg.FieldFiles, "logo.png", bytes.NewReader(logo)).
 		Bool(gotenberg.FieldPrintBackground, true).
 		WebhookURLMethodPost("http://host.docker.internal:28080/success").
 		WebhookErrorURLMethodPost("http://host.docker.internal:28080/error").
 		WebhookExtraHeaders(map[string]string{"X-Custom-Header": "MyValue"}).
-		Execute(httpClient)
+		Send()
 
 	if err != nil {
 		log.Fatal(err)

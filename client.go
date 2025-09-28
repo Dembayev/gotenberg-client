@@ -14,61 +14,7 @@ import (
 )
 
 const (
-	FieldSinglePage              = "singlePage"
-	FieldPaperWidth              = "paperWidth"
-	FieldPaperHeight             = "paperHeight"
-	FieldMarginTop               = "marginTop"
-	FieldMarginBottom            = "marginBottom"
-	FieldMarginLeft              = "marginLeft"
-	FieldMarginRight             = "marginRight"
-	FieldPreferCSSPageSize       = "preferCssPageSize"
-	FieldGenerateDocumentOutline = "generateDocumentOutline"
-	FieldGenerateTaggedPDF       = "generateTaggedPdf"
-	FieldPrintBackground         = "printBackground"
-	FieldOmitBackground          = "omitBackground"
-	FieldLandscape               = "landscape"
-	FieldScale                   = "scale"
-	FieldNativePageRanges        = "nativePageRanges"
-)
-
-const (
-	HeaderWebhookURL              = "Gotenberg-Webhook-Url"
-	HeaderWebhookErrorURL         = "Gotenberg-Webhook-Error-Url"
-	HeaderWebhookMethod           = "Gotenberg-Webhook-Method"
-	HeaderWebhookErrorMethod      = "Gotenberg-Webhook-Error-Method"
-	HeaderWebhookExtraHTTPHeaders = "Gotenberg-Webhook-Extra-Http-Headers"
-)
-
-const (
-	ConvertHTML = "/forms/chromium/convert/html"
-	ConvertURL  = "/forms/chromium/convert/url"
-)
-
-var (
-	PaperSizeLetter  = [2]float64{8.5, 11}
-	PaperSizeLegal   = [2]float64{8.5, 14}
-	PaperSizeTabloid = [2]float64{11, 17}
-	PaperSizeLedger  = [2]float64{17, 11}
-	PaperSizeA0      = [2]float64{33.1, 46.8}
-	PaperSizeA1      = [2]float64{23.4, 33.1}
-	PaperSizeA2      = [2]float64{16.54, 23.4}
-	PaperSizeA3      = [2]float64{11.7, 16.54}
-	PaperSizeA4      = [2]float64{8.27, 11.7}
-	PaperSizeA5      = [2]float64{5.83, 8.27}
-	PaperSizeA6      = [2]float64{4.13, 5.83}
-)
-
-const (
 	bufferSize = 1 << 12 // 4096 bytes (4 KB)
-)
-
-const (
-	FieldURL       = "url"
-	FieldFiles     = "files"
-	FileIndexHTML  = "index.html"
-	FileFooterHTML = "footer.html"
-	FileHeaderHTML = "header.html"
-	FileStylesCSS  = "styles.css"
 )
 
 const (
@@ -85,62 +31,67 @@ type Form struct {
 }
 
 type Client struct {
-	baseURL string
+	baseURL *url.URL
 	client  *http.Client
 	request *http.Request
 	err     error
 	Form
 }
 
-func NewClient(client *http.Client, baseURL string) *Client {
+func NewClient(client *http.Client, baseURL string) (*Client, error) {
+	u, err := url.Parse(baseURL)
+	if err != nil {
+		return nil, fmt.Errorf("invalid base URL: %v", err)
+	}
+
 	return &Client{
 		client:  client,
-		baseURL: baseURL,
-	}
+		baseURL: u,
+	}, nil
 }
 
-func (r *Client) MethodGet(ctx context.Context, url string) *Client {
+func (r *Client) MethodGet(ctx context.Context, path string) *Client {
 	if r.err != nil {
 		return r
 	}
 
-	r.request, r.err = http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	r.request, r.err = http.NewRequestWithContext(ctx, http.MethodGet, r.baseURL.JoinPath(path).String(), nil)
 	return r
 }
 
-func (r *Client) MethodPost(ctx context.Context, url string) *Client {
+func (r *Client) MethodPost(ctx context.Context, path string) *Client {
 	if r.err != nil {
 		return r
 	}
 
-	r.request, r.err = http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
+	r.request, r.err = http.NewRequestWithContext(ctx, http.MethodPost, r.baseURL.JoinPath(path).String(), nil)
 	return r
 }
 
-func (r *Client) MethodPut(ctx context.Context, url string) *Client {
+func (r *Client) MethodPut(ctx context.Context, path string) *Client {
 	if r.err != nil {
 		return r
 	}
 
-	r.request, r.err = http.NewRequestWithContext(ctx, http.MethodPut, url, nil)
+	r.request, r.err = http.NewRequestWithContext(ctx, http.MethodPut, r.baseURL.JoinPath(path).String(), nil)
 	return r
 }
 
-func (r *Client) MethodPatch(ctx context.Context, url string) *Client {
+func (r *Client) MethodPatch(ctx context.Context, path string) *Client {
 	if r.err != nil {
 		return r
 	}
 
-	r.request, r.err = http.NewRequestWithContext(ctx, http.MethodPatch, url, nil)
+	r.request, r.err = http.NewRequestWithContext(ctx, http.MethodPatch, r.baseURL.JoinPath(path).String(), nil)
 	return r
 }
 
-func (r *Client) MethodDelete(ctx context.Context, url string) *Client {
+func (r *Client) MethodDelete(ctx context.Context, path string) *Client {
 	if r.err != nil {
 		return r
 	}
 
-	r.request, r.err = http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
+	r.request, r.err = http.NewRequestWithContext(ctx, http.MethodDelete, r.baseURL.JoinPath(path).String(), nil)
 	return r
 }
 
@@ -286,28 +237,6 @@ func (r *Client) JSONBody(body any) *Client {
 	return r
 }
 
-func (r *Client) WebhookURLMethodPost(url string) *Client {
-	return r.Header(HeaderWebhookURL, url).Header(HeaderWebhookMethod, http.MethodPost)
-}
-
-func (r *Client) WebhookErrorURLMethodPost(url string) *Client {
-	return r.Header(HeaderWebhookErrorURL, url).Header(HeaderWebhookErrorMethod, http.MethodPost)
-}
-
-func (r *Client) WebhookExtraHeaders(headers map[string]string) *Client {
-	if r.err != nil {
-		return r
-	}
-
-	jsonHeaders, err := json.Marshal(headers)
-	if err != nil {
-		r.err = fmt.Errorf("failed to marshal webhook headers: %w", err)
-		return r
-	}
-
-	return r.Header(HeaderWebhookExtraHTTPHeaders, string(jsonHeaders))
-}
-
 func (r *Client) File(fieldName, filename string, content io.Reader) *Client {
 	if r.err != nil {
 		return r
@@ -365,54 +294,6 @@ func (r *Client) FormField(fieldName, value string) *Client {
 	}
 
 	return r
-}
-
-func (r *Client) IndexHTML(html io.Reader) *Client {
-	return r.File(FieldFiles, FileIndexHTML, html)
-}
-
-func (r *Client) FooterHTML(html io.Reader) *Client {
-	return r.File(FieldFiles, FileFooterHTML, html)
-}
-
-func (r *Client) HeaderHTML(html io.Reader) *Client {
-	return r.File(FieldFiles, FileHeaderHTML, html)
-}
-
-func (r *Client) StylesCSS(css io.Reader) *Client {
-	return r.File(FieldFiles, FileStylesCSS, css)
-}
-
-func (r *Client) URL(url string) *Client {
-	return r.FormField(FieldURL, url)
-}
-
-func (r *Client) Bool(fieldName string, value bool) *Client {
-	return r.FormField(fieldName, fmt.Sprintf("%t", value))
-}
-
-func (r *Client) Float(fieldName string, value float64) *Client {
-	return r.FormField(fieldName, fmt.Sprintf("%g", value))
-}
-
-func (r *Client) PaperSize(width, height float64) *Client {
-	return r.Float(FieldPaperWidth, width).
-		Float(FieldPaperHeight, height)
-}
-
-func (r *Client) PaperSizeA4() *Client {
-	return r.PaperSize(PaperSizeA4[0], PaperSizeA4[1])
-}
-
-func (r *Client) PaperSizeLetter() *Client {
-	return r.PaperSize(PaperSizeLetter[0], PaperSizeLetter[1])
-}
-
-func (r *Client) Margins(top, right, bottom, left float64) *Client {
-	return r.Float(FieldMarginTop, top).
-		Float(FieldMarginRight, right).
-		Float(FieldMarginBottom, bottom).
-		Float(FieldMarginLeft, left)
 }
 
 func (r *Client) Err() error {
