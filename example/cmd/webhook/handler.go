@@ -13,8 +13,20 @@ import (
 
 func webhookHandler(name string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		if name != "success" {
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				slog.Error("webhook", "error", "failed to read body", "read_error", err)
+			} else {
+				slog.Error("webhook", "error", string(body))
+			}
+			http.Error(w, "error", http.StatusBadRequest)
 			return
 		}
 
