@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"log"
 	"log/slog"
@@ -33,7 +32,8 @@ func webhookHandler(name string) http.HandlerFunc {
 		}
 		defer r.Body.Close()
 
-		slog.Info(fmt.Sprintf("webhook %s received", name),
+		slog.Info("webhook",
+			"received", name,
 			"method", r.Method,
 			"path", r.URL.Path,
 			"gotenberg-trace", r.Header.Get(gotenberg.HeaderGotenbergTrace),

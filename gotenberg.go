@@ -3,9 +3,9 @@ package gotenberg
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 
 	httpclient "github.com/nativebpm/http-client"
 )
@@ -141,7 +141,7 @@ func (r *Request) Bool(fieldName string, value bool) *Request {
 	if r == nil {
 		return r
 	}
-	r.Multipart, r.err = r.Multipart.FormField(fieldName, fmt.Sprintf("%t", value)).GetRequest()
+	r.Multipart, r.err = r.Multipart.FormField(fieldName, strconv.FormatBool(value)).GetRequest()
 	return r
 }
 
@@ -149,7 +149,7 @@ func (r *Request) Float(fieldName string, value float64) *Request {
 	if r == nil {
 		return r
 	}
-	r.Multipart, r.err = r.Multipart.FormField(fieldName, fmt.Sprintf("%g", value)).GetRequest()
+	r.Multipart, r.err = r.Multipart.FormField(fieldName, strconv.FormatFloat(value, 'f', -1, 64)).GetRequest()
 	return r
 }
 
