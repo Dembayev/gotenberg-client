@@ -138,7 +138,7 @@ func (r *Request) WebhookHeaders(headers map[string]string) *Request {
 }
 
 func (r *Request) Bool(fieldName string, value bool) *Request {
-	if r == nil {
+	if r.err != nil {
 		return r
 	}
 	r.Multipart, r.err = r.Multipart.FormField(fieldName, strconv.FormatBool(value)).GetRequest()
@@ -146,7 +146,7 @@ func (r *Request) Bool(fieldName string, value bool) *Request {
 }
 
 func (r *Request) Float(fieldName string, value float64) *Request {
-	if r == nil {
+	if r.err != nil {
 		return r
 	}
 	r.Multipart, r.err = r.Multipart.FormField(fieldName, strconv.FormatFloat(value, 'f', -1, 64)).GetRequest()
@@ -154,7 +154,7 @@ func (r *Request) Float(fieldName string, value float64) *Request {
 }
 
 func (r *Request) PaperSize(width, height float64) *Request {
-	if r == nil {
+	if r.err != nil {
 		return r
 	}
 	r.Float(FieldPaperWidth, width)
@@ -171,7 +171,7 @@ func (r *Request) PaperSizeLetter() *Request {
 }
 
 func (r *Request) Margins(top, right, bottom, left float64) *Request {
-	if r == nil {
+	if r.err != nil {
 		return r
 	}
 	r.Float(FieldMarginTop, top)
@@ -182,7 +182,7 @@ func (r *Request) Margins(top, right, bottom, left float64) *Request {
 }
 
 func (r *Request) File(fieldName, filename string, content io.Reader) *Request {
-	if r == nil {
+	if r.err != nil {
 		return r
 	}
 	r.Multipart, r.err = r.Multipart.File(fieldName, filename, content).GetRequest()
@@ -190,7 +190,7 @@ func (r *Request) File(fieldName, filename string, content io.Reader) *Request {
 }
 
 func (r *Request) Header(key, value string) *Request {
-	if r == nil {
+	if r.err != nil {
 		return r
 	}
 	r.Multipart, r.err = r.Multipart.Header(key, value).GetRequest()
@@ -198,7 +198,7 @@ func (r *Request) Header(key, value string) *Request {
 }
 
 func (r *Request) FormField(fieldName, value string) *Request {
-	if r == nil {
+	if r.err != nil {
 		return r
 	}
 	r.Multipart, r.err = r.Multipart.FormField(fieldName, value).GetRequest()
