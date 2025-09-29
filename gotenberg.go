@@ -93,21 +93,21 @@ func NewClient(httpClient *http.Client, baseURL string) (*Client, error) {
 
 func (c *Client) ConvertHTML(ctx context.Context, html io.Reader) *Request {
 	r := &Request{}
-	r.Multipart, r.err = c.Client.MultipartMethodPost(ctx, ConvertHTML).File(FieldFiles, FileIndexHTML, html).GetRequest()
+	r.Multipart, r.err = c.Client.MultipartPOST(ctx, ConvertHTML).File(FieldFiles, FileIndexHTML, html).GetRequest()
 	return r
 }
 
 func (c *Client) ConvertURL(ctx context.Context, url string) *Request {
 	r := &Request{}
-	r.Multipart, r.err = c.Client.MultipartMethodPost(ctx, ConvertURL).FormField(FieldURL, url).GetRequest()
+	r.Multipart, r.err = c.Client.MultipartPOST(ctx, ConvertURL).FormField(FieldURL, url).GetRequest()
 	return r
 }
 
-func (r *Request) WebhookURLMethodPost(url string) *Request {
+func (r *Request) WebhookURL(url, method string) *Request {
 	if r.err != nil {
 		return r
 	}
-	r.Multipart, r.err = r.Multipart.Header(HeaderWebhookURL, url).Header(HeaderWebhookMethod, http.MethodPost).GetRequest()
+	r.Multipart, r.err = r.Multipart.Header(HeaderWebhookURL, url).Header(HeaderWebhookMethod, method).GetRequest()
 	return r
 }
 
@@ -119,15 +119,15 @@ func (r *Request) OutputFilename(filename string) *Request {
 	return r
 }
 
-func (r *Request) WebhookErrorURLMethodPost(url string) *Request {
+func (r *Request) WebhookErrorURL(url, method string) *Request {
 	if r.err != nil {
 		return r
 	}
-	r.Multipart, r.err = r.Multipart.Header(HeaderWebhookErrorURL, url).Header(HeaderWebhookErrorMethod, http.MethodPost).GetRequest()
+	r.Multipart, r.err = r.Multipart.Header(HeaderWebhookErrorURL, url).Header(HeaderWebhookErrorMethod, method).GetRequest()
 	return r
 }
 
-func (r *Request) WebhookExtraHeaders(headers map[string]string) *Request {
+func (r *Request) WebhookHeaders(headers map[string]string) *Request {
 	jsonHeaders, err := json.Marshal(headers)
 	if err != nil {
 		r.err = err

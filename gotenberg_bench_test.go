@@ -19,8 +19,8 @@ func BenchmarkRequestChain(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		r := c.ConvertHTML(ctx, bytes.NewReader(html)).
 			File(FieldFiles, FileIndexHTML, bytes.NewReader(html)).
-			WebhookURLMethodPost("http://example.com/webhook").
-			WebhookExtraHeaders(map[string]string{"k": "v"}).
+			WebhookURL("http://example.com/webhook", http.MethodPost).
+			WebhookHeaders(map[string]string{"k": "v"}).
 			OutputFilename("doc.pdf").
 			Bool(FieldPrintBackground, true).
 			Float(FieldScale, 1.23).

@@ -40,9 +40,9 @@ func main() {
 	resp, err := client.ConvertHTML(context.Background(), html).
 		File(gotenberg.FieldFiles, "logo.png", bytes.NewReader(logo)).
 		Bool(gotenberg.FieldPrintBackground, true).
-		WebhookURLMethodPost("http://host.docker.internal:28080/success").
-		WebhookErrorURLMethodPost("http://host.docker.internal:28080/error").
-		WebhookExtraHeaders(map[string]string{"X-Custom-Header": "MyValue"}).
+		WebhookURL("http://host.docker.internal:28080/success", http.MethodPost).
+		WebhookErrorURL("http://host.docker.internal:28080/error", http.MethodPost).
+		WebhookHeaders(map[string]string{"X-Custom-Header": "MyValue"}).
 		OutputFilename("invoice_async.pdf").
 		Send()
 
