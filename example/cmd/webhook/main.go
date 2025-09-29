@@ -43,7 +43,7 @@ func main() {
 		WebhookURL("http://host.docker.internal:28080/success", http.MethodPost).
 		WebhookErrorURL("http://host.docker.internal:28080/error", http.MethodPost).
 		WebhookHeaders(map[string]string{"X-Custom-Header": "MyValue"}).
-		OutputFilename("invoice_async.pdf").
+		OutputFilename("invoice_async").
 		Send()
 
 	if err != nil {
