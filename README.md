@@ -11,7 +11,7 @@ A high-performance Go client for the [Gotenberg](https://gotenberg.dev/) HTTP AP
 - Minimal dependencies (only stdlib + [http-client](https://github.com/nativebpm/http-client))
 - Fluent API for building requests
 - Support for HTML/URL to PDF conversion
-- Webhook support for async jobs (with example)
+- Webhook support
 - Easy file/multipart uploads
 - Paper size, margins, and advanced PDF options
 
@@ -23,44 +23,46 @@ A high-performance Go client for the [Gotenberg](https://gotenberg.dev/) HTTP AP
 package main
 
 import (
-    "context"
-    "io"
-    "log"
-    "net/http"
-    "os"
-    "strings"
-    "github.com/nativebpm/gotenberg-client"
+	"context"
+	"io"
+	"log"
+	"net/http"
+	"os"
+	"strings"
+
+	"github.com/nativebpm/gotenberg-client"
 )
 
 func main() {
-    client, err := gotenberg.NewClient(&http.Client{}, "http://localhost:3000")
-    if err != nil {
-        log.Fatal(err)
-    }
+	client, err := gotenberg.NewClient(&http.Client{}, "http://localhost:3000")
+	if err != nil {
+		log.Fatal(err)
+	}
 
-    html := strings.NewReader("<html><body><h1>Hello World!</h1></body></html>")
+	html := strings.NewReader("<html><body><h1>Hello World!</h1></body></html>")
 
-    resp, err := client.
-        ConvertHTML(context.Background(), html).
-        PaperSizeA4().
-        Send()
-    if err != nil {
-        log.Fatal(err)
-    }
-    defer resp.Body.Close()
+	resp, err := client.
+		ConvertHTML(context.Background(), html).
+		PaperSizeA6().
+		Margins(0.5, 0.5, 0.5, 0.5).
+		Send()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
 
-    f, _ := os.Create("out.pdf")
-    io.Copy(f, resp.Body)
-    f.Close()
+	f, _ := os.Create("out.pdf")
+	io.Copy(f, resp.Body)
+	f.Close()
 }
 ```
 
 ## Example: Async PDF Generation with Webhook
 
-See [`example/cmd/webhook`](example/cmd/webhook) for a full async webhook demo (HTML invoice to PDF, with logo, webhook server, and error handling):
+See [`examples/cmd/webhook`](examples/cmd/webhook) for a full async webhook demo (HTML invoice to PDF, with logo, webhook server, and error handling):
 
 ```sh
-go run ./example/cmd/webhook
+go run ./examples/cmd/webhook
 ```
 
 This will:
@@ -88,11 +90,11 @@ go test -v -bench=. ./...
 ## Project Structure
 
 - `gotenberg.go` — main client implementation
-- `example/` — real-world usage: invoice template, logo, webhook server
-- `example/cmd/webhook` — async webhook demo
-- `example/model` — invoice data structs
-- `example/pkg/templates/invoice` — HTML template for invoice
-- `example/pkg/image` — logo generator
+- `examples/` — real-world usage: invoice template, logo, webhook server
+- `examples/cmd/webhook` — async webhook demo
+- `examples/model` — invoice data structs
+- `examples/pkg/templates/invoice` — HTML template for invoice
+- `examples/pkg/image` — logo generator
 
 ## Dependencies
 

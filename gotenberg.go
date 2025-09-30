@@ -179,6 +179,10 @@ func (r *Request) PaperSizeA4() *Request {
 	return r.PaperSize(PaperSizeA4[0], PaperSizeA4[1])
 }
 
+func (r *Request) PaperSizeA6() *Request {
+	return r.PaperSize(PaperSizeA6[0], PaperSizeA6[1])
+}
+
 func (r *Request) PaperSizeLetter() *Request {
 	return r.PaperSize(PaperSizeLetter[0], PaperSizeLetter[1])
 }
