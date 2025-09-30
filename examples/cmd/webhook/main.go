@@ -12,9 +12,9 @@ import (
 	"time"
 
 	"github.com/nativebpm/gotenberg-client"
-	"github.com/nativebpm/gotenberg-client/example/model"
-	"github.com/nativebpm/gotenberg-client/example/pkg/image"
-	"github.com/nativebpm/gotenberg-client/example/pkg/templates/invoice"
+	"github.com/nativebpm/gotenberg-client/examples/model"
+	"github.com/nativebpm/gotenberg-client/examples/pkg/image"
+	"github.com/nativebpm/gotenberg-client/examples/pkg/templates/invoice"
 )
 
 func main() {
