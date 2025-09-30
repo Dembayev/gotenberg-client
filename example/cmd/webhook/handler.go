@@ -45,12 +45,13 @@ func webhookHandler(name string) http.HandlerFunc {
 		defer r.Body.Close()
 
 		slog.Info("webhook",
+			"gotenberg-trace", r.Header.Get(gotenberg.HeaderGotenbergTrace),
 			"received", name,
 			"method", r.Method,
 			"path", r.URL.Path,
-			"gotenberg-trace", r.Header.Get(gotenberg.HeaderGotenbergTrace),
-			"x-custom-header", r.Header.Get("X-Custom-Header"),
 			"content length", n,
+			"x-custom-header", r.Header.Get("X-Custom-Header"),
+			"x-custom-header2", r.Header.Get("X-Custom-Header2"),
 		)
 
 		w.Header().Set("Content-Type", "application/json")

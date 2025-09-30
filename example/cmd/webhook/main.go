@@ -26,10 +26,6 @@ func main() {
 		Timeout: 90 * time.Second,
 	}
 
-	data := model.InvoiceData
-	html := bytes.NewBuffer(nil)
-	invoice.Template.Execute(html, data)
-
 	logo := image.LogoPNG()
 
 	client, err := gotenberg.NewClient(httpClient, gotenbergURL)
@@ -37,22 +33,57 @@ func main() {
 		log.Fatal(err)
 	}
 
-	resp, err := client.ConvertHTML(context.Background(), html).
-		File(gotenberg.FieldFiles, "logo.png", bytes.NewReader(logo)).
-		Bool(gotenberg.FieldPrintBackground, true).
-		WebhookURL("http://host.docker.internal:28080/success", http.MethodPost).
-		WebhookErrorURL("http://host.docker.internal:28080/error", http.MethodPost).
-		WebhookHeaders(map[string]string{"X-Custom-Header": "MyValue"}).
-		OutputFilename("invoice_async").
-		Send()
+	{ // Example #1:
+		data := model.InvoiceData
+		html := bytes.NewBuffer(nil)
+		if err := invoice.Template.Execute(html, data); err != nil {
+			log.Fatal(err)
+		}
 
-	if err != nil {
-		log.Fatal(err)
+		resp, err := client.ConvertHTML(context.Background(), html).
+			File(gotenberg.FieldFiles, "logo.png", bytes.NewReader(logo)).
+			Bool(gotenberg.FieldPrintBackground, true).
+			WebhookURL("http://host.docker.internal:28080/success", http.MethodPost).
+			WebhookErrorURL("http://host.docker.internal:28080/error", http.MethodPost).
+			WebhookHeader("X-Custom-Header", "MyValue").
+			OutputFilename("invoice_async").
+			Send()
+
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer resp.Body.Close()
+
+		slog.Info("Async HTML to PDF conversion started",
+			"gotenberg-trace", resp.GotenbergTrace)
 	}
-	defer resp.Body.Close()
 
-	slog.Info("Async HTML to PDF conversion started",
-		"gotenberg-trace", resp.GotenbergTrace)
+	{ // Example #2:
+		data := model.InvoiceData
+		html := bytes.NewBuffer(nil)
+		if err := invoice.Template.Execute(html, data); err != nil {
+			log.Fatal(err)
+		}
+
+		resp, err := client.ConvertHTML(context.Background(), html).
+			File(gotenberg.FieldFiles, "logo.png", bytes.NewReader(logo)).
+			Bool(gotenberg.FieldPrintBackground, true).
+			WebhookURL("http://host.docker.internal:28080/success", http.MethodPost).
+			WebhookErrorURL("http://host.docker.internal:28080/error", http.MethodPost).
+			WebhookHeader("X-Custom-Header", "MyValue").
+			WebhookHeader("X-Custom-Header2", "MyValue2").
+			Margins(1.0, 1.5, 1.0, 1.5).
+			OutputFilename("invoice_async2").
+			Send()
+
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer resp.Body.Close()
+
+		slog.Info("Async HTML to PDF conversion started",
+			"gotenberg-trace", resp.GotenbergTrace)
+	}
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)

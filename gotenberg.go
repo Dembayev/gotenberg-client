@@ -16,6 +16,7 @@ type Client struct {
 
 type Request struct {
 	req *request.Multipart
+	wh  map[string]string
 	err error
 }
 
@@ -54,6 +55,10 @@ func (r *Request) Err() error {
 }
 
 func (r *Request) Send() (*Response, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+
 	resp, err := r.req.Send()
 	if err != nil {
 		return nil, err
@@ -61,31 +66,51 @@ func (r *Request) Send() (*Response, error) {
 	return &Response{
 		Response:       resp,
 		GotenbergTrace: resp.Header.Get(HeaderGotenbergTrace),
-	}, err
+	}, nil
 }
 
 func (r *Request) Header(key, value string) *Request {
-	r.req = r.req.Header(key, value)
+	if r.err != nil {
+		return r
+	}
+
+	r.req.Header(key, value)
 	return r
 }
 
 func (r *Request) Param(key, value string) *Request {
-	r.req = r.req.Param(key, value)
+	if r.err != nil {
+		return r
+	}
+
+	r.req.Param(key, value)
 	return r
 }
 
 func (r *Request) Bool(fieldName string, value bool) *Request {
-	r.req = r.req.Bool(fieldName, value)
+	if r.err != nil {
+		return r
+	}
+
+	r.req.Bool(fieldName, value)
 	return r
 }
 
 func (r *Request) Float(fieldName string, value float64) *Request {
-	r.req = r.req.Float(fieldName, value)
+	if r.err != nil {
+		return r
+	}
+
+	r.req.Float(fieldName, value)
 	return r
 }
 
 func (r *Request) File(key, filename string, content io.Reader) *Request {
-	r.req = r.req.File(key, filename, content)
+	if r.err != nil {
+		return r
+	}
+
+	r.req.File(key, filename, content)
 	return r
 }
 
@@ -93,7 +118,8 @@ func (r *Request) WebhookURL(url, method string) *Request {
 	if r.err != nil {
 		return r
 	}
-	r.req = r.req.Header(HeaderWebhookURL, url).Header(HeaderWebhookMethod, method)
+
+	r.req.Header(HeaderWebhookURL, url).Header(HeaderWebhookMethod, method)
 	r.err = r.req.Err()
 	return r
 }
@@ -102,7 +128,8 @@ func (r *Request) OutputFilename(filename string) *Request {
 	if r.err != nil {
 		return r
 	}
-	r.req = r.req.Header(HeaderOutputFilename, filename)
+
+	r.req.Header(HeaderOutputFilename, filename)
 	r.err = r.req.Err()
 	return r
 }
@@ -111,18 +138,29 @@ func (r *Request) WebhookErrorURL(url, method string) *Request {
 	if r.err != nil {
 		return r
 	}
-	r.req = r.req.Header(HeaderWebhookErrorURL, url).Header(HeaderWebhookErrorMethod, method)
+
+	r.req.Header(HeaderWebhookErrorURL, url).Header(HeaderWebhookErrorMethod, method)
 	r.err = r.req.Err()
 	return r
 }
 
-func (r *Request) WebhookHeaders(headers map[string]string) *Request {
-	jsonHeaders, err := json.Marshal(headers)
+func (r *Request) WebhookHeader(key, value string) *Request {
+	if r.err != nil {
+		return r
+	}
+
+	if r.wh == nil {
+		r.wh = make(map[string]string)
+	}
+
+	r.wh[key] = value
+	webhookHeaders, err := json.Marshal(r.wh)
 	if err != nil {
 		r.err = err
 		return r
 	}
-	r.req = r.req.Header(HeaderWebhookExtraHTTPHeaders, string(jsonHeaders))
+
+	r.req.Header(HeaderWebhookExtraHTTPHeaders, string(webhookHeaders))
 	r.err = r.req.Err()
 	return r
 }
@@ -131,6 +169,7 @@ func (r *Request) PaperSize(width, height float64) *Request {
 	if r.err != nil {
 		return r
 	}
+
 	r.req.Float(FieldPaperWidth, width)
 	r.req.Float(FieldPaperHeight, height)
 	return r
@@ -148,6 +187,7 @@ func (r *Request) Margins(top, right, bottom, left float64) *Request {
 	if r.err != nil {
 		return r
 	}
+
 	r.req.Float(FieldMarginTop, top)
 	r.req.Float(FieldMarginRight, right)
 	r.req.Float(FieldMarginBottom, bottom)

@@ -142,8 +142,7 @@ func TestWebhookErrorURL(t *testing.T) {
 func TestWebhookHeaders(t *testing.T) {
 	c := newTestClient(t)
 	r := c.ConvertHTML(context.Background(), bytes.NewBufferString("<html></html>"))
-	headers := map[string]string{"A": "B"}
-	r.WebhookHeaders(headers)
+	r.WebhookHeader("X-Test", "v1")
 	_, err := r.Send()
 	if err != nil {
 		t.Errorf("Send failed: %v", err)
