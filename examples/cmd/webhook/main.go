@@ -43,8 +43,8 @@ func cleanupPDFFiles() {
 }
 
 func main() {
-	// Clean up any existing PDF files before starting
 	cleanupPDFFiles()
+
 	srv := StartServer(":28080")
 
 	gotenbergURL := `http://localhost:3000`
@@ -60,7 +60,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	{ // Example #1:
+	go func() { // Example #1:
 		data := model.InvoiceData
 		html := bytes.NewBuffer(nil)
 		if err := invoice.Template.Execute(html, data); err != nil {
@@ -83,9 +83,10 @@ func main() {
 
 		slog.Info("Async HTML to PDF conversion started",
 			"gotenberg-trace", resp.GotenbergTrace)
-	}
+	}()
 
-	{ // Example #2:
+	go func() { // Example #2:
+		time.Sleep(1 * time.Second) // Задержка для избежания одновременных запросов
 		data := model.InvoiceData
 		html := bytes.NewBuffer(nil)
 		if err := invoice.Template.Execute(html, data); err != nil {
@@ -110,7 +111,7 @@ func main() {
 
 		slog.Info("Async HTML to PDF conversion started",
 			"gotenberg-trace", resp.GotenbergTrace)
-	}
+	}()
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)

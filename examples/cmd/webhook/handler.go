@@ -7,9 +7,12 @@ import (
 	"mime"
 	"net/http"
 	"os"
+	"sync"
 
 	"github.com/nativebpm/gotenberg-client"
 )
+
+var fileMutex sync.Mutex
 
 func webhookHandler(name string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -31,6 +34,9 @@ func webhookHandler(name string) http.HandlerFunc {
 		}
 
 		filename := filename(r.Header)
+
+		fileMutex.Lock()
+		defer fileMutex.Unlock()
 
 		outFile, err := os.Create(filename)
 		if err != nil {
