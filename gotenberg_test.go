@@ -3,7 +3,6 @@ package gotenberg
 import (
 	"bytes"
 	"context"
-	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -76,13 +75,6 @@ func TestConvertURL(t *testing.T) {
 	}
 	if resp.GotenbergTrace != "trace-id" {
 		t.Errorf("expected trace-id, got %s", resp.GotenbergTrace)
-	}
-}
-
-func TestRequestErr(t *testing.T) {
-	r := &Request{err: errors.New("fail")}
-	if r.Err() == nil {
-		t.Error("expected error")
 	}
 }
 

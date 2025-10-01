@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -17,7 +18,33 @@ import (
 	"github.com/nativebpm/gotenberg-client/examples/pkg/templates/invoice"
 )
 
+// cleanupPDFFiles removes all PDF files from the current directory
+func cleanupPDFFiles() {
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		slog.Warn("failed to read current directory", "err", err)
+		return
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		name := entry.Name()
+		if strings.HasSuffix(strings.ToLower(name), ".pdf") {
+			if err := os.Remove(name); err != nil {
+				slog.Warn("failed to remove PDF file", "file", name, "err", err)
+			} else {
+				slog.Info("removed PDF file", "file", name)
+			}
+		}
+	}
+}
+
 func main() {
+	// Clean up any existing PDF files before starting
+	cleanupPDFFiles()
 	srv := StartServer(":28080")
 
 	gotenbergURL := `http://localhost:3000`
